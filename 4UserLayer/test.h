@@ -72,7 +72,7 @@ int CJSON_CDECL json_test(void);
 void testled(uint8_t flag);
 
 
-
+void addJsonTest(void);
 
 
 

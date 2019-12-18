@@ -41,8 +41,8 @@
  * 内部函数原型说明                             *
  *----------------------------------------------*/
 static uint8_t * GetDevSn(void);
-const uint8_t VersionString[] = "1.0.3";
-const uint8_t Hardversion[] = "1.0.3";
+const uint8_t VersionString[] = "1.0.1";
+const uint8_t Hardversion[] = "1.0.1";
 const uint8_t SoftBulidDate[] = __DATE__ " " __TIME__;
 const uint8_t DevModel[] = "SmartChannel";
 const uint8_t DevBatch[] = "20191202001";

@@ -36,9 +36,17 @@
 #define DEVICE_PUBLISH		"/smartCloud/server/msg/device"									//
 #define DEVICE_SUBSCRIBE	"/smartCloud/terminal/msg/3E51E8848A4C00863617"	
 
+#define DEVICE_SN           "3E51E8848A4C00863617"
+
 //#define   HOST_NAME       "120.78.247.221"     //服务器IP地址 线上
 #define   HOST_NAME       "192.168.110.78"     //服务器IP地址 线下 
 #define   HOST_PORT     1883    //由于是TCP连接，端口必须是1883
+
+extern int gConnectStatus;
+
+extern int	mysock;
+
+//typedef int(*ptr)(uint8_t *jsonData); //获取SN的回调
 
 
 //设置设备属性

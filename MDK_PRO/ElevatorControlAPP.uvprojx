@@ -274,8 +274,8 @@
               </OCR_RVCT3>
               <OCR_RVCT4>
                 <Type>1</Type>
-                <StartAddress>0x8000000</StartAddress>
-                <Size>0xf0000</Size>
+                <StartAddress>0x8030000</StartAddress>
+                <Size>0xd0000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
                 <Type>1</Type>
@@ -492,6 +492,11 @@
               <FileName>version.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\4UserLayer\version.c</FilePath>
+            </File>
+            <File>
+              <FileName>mqtt_send.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\4UserLayer\mqtt_send.c</FilePath>
             </File>
           </Files>
         </Group>

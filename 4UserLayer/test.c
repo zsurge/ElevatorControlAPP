@@ -29,6 +29,8 @@
 #include "tool.h"
 
 
+#define LOG_TAG    "TEST"
+#include "elog.h"
 
 
 void FlashTest(void)
@@ -260,6 +262,48 @@ int CJSON_CDECL json_test(void)
     create_objects();
 
     return 0;
+}
+
+
+void addJsonTest(void)
+{
+    unsigned char payload_out[200];
+    sprintf((char*)payload_out,"{\"commandCode\":\"201\",\"data\":{\"identification\":\"%s\",\"openStatus\":\"1\"},\"deviceCode\":\"3E51E8848A4C00863617\"}","134");
+
+
+    log_d("payload_out = %s\r\n",payload_out);
+    cJSON *json , *json_url,*json_new;
+    json = cJSON_Parse((char *)payload_out);         //解析数据包
+    if (!json)  
+    {  
+        log_d("Error before: [%s]\r\n",cJSON_GetErrorPtr());  
+    } 
+    else
+    {
+        json_url = cJSON_GetObjectItem(json , "picUrl"); 
+        if(json_url->type == cJSON_String)
+        {
+            log_d("picUrl:%s\r\n", json_url->valuestring);  
+            
+        }        
+    }  
+
+    json_new = cJSON_GetObjectItem( json , "data" ); 
+
+    cJSON_AddStringToObject(json,"surge","test");
+    cJSON_AddStringToObject(json,"111324","22222");
+    cJSON_AddStringToObject(json_new,"442342","te11111st");
+    cJSON_AddStringToObject(json_new,"42413125","222");
+
+    if (print_preallocated(json) != 0) 
+    {
+        cJSON_Delete(json);
+        exit(EXIT_FAILURE);
+    }
+    cJSON_Delete(json);
+
+    
+
 }
 
 

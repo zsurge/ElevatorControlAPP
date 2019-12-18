@@ -51,7 +51,7 @@
 
 /* the string ENV value buffer size for legacy ef_get_env() function */
 #ifndef EF_STR_ENV_VALUE_MAX_SIZE
-#define EF_STR_ENV_VALUE_MAX_SIZE                128
+#define EF_STR_ENV_VALUE_MAX_SIZE                512
 #endif
 
 /* the sector remain threshold before full status */
@@ -587,7 +587,7 @@ char *ef_get_env(const char *key)
     size_t get_size;
 
     if ((get_size = ef_get_env_blob(key, value, EF_STR_ENV_VALUE_MAX_SIZE, NULL)) > 0) {
-        /* the return value must be string */
+        /* the return value must be string */        
         if (ef_is_str((uint8_t *)value, get_size)) {
             value[get_size] = '\0';
             return value;
@@ -1059,6 +1059,8 @@ static EfErrCode set_env(const char *key, const void *value_buf, size_t buf_len)
     static struct env_meta_data env;
     static struct sector_meta_data sector;
     bool env_is_found = false;
+
+
 
     if (value_buf == NULL) {
         result = del_env(key, NULL, true);

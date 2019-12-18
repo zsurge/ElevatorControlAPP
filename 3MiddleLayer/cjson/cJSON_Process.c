@@ -63,6 +63,9 @@ uint8_t cJSON_Update(const cJSON * const object,const char * const string,void *
 
 }
 
+
+
+
 void Proscess(void* data)
 {
     log_d("开始解析JSON数据");
@@ -91,10 +94,7 @@ void Proscess(void* data)
               json_hum_num->valuestring);
 
   cJSON_Delete(root);  //释放内存 
-  cJSON_Delete(json_name);
-  cJSON_Delete(json_obj_data);
-  cJSON_Delete(json_temp_num);
-  cJSON_Delete(json_hum_num);
+
 }
 
 

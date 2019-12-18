@@ -106,7 +106,7 @@ On other scenarios, the user must solve this by taking into account that the cur
 MQTTPacket_read() has a function pointer for a function call to get the data to a buffer, but no provisions
 to know the caller or other indicator (the socket id): int (*getfn)(unsigned char*, int)
 */
-static int mysock = INVALID_SOCKET;
+static int my_sock = INVALID_SOCKET;
 
 
 int transport_sendPacketBuffer(int sock, unsigned char* buf, int buflen)
@@ -119,7 +119,7 @@ int transport_sendPacketBuffer(int sock, unsigned char* buf, int buflen)
 
 int transport_getdata(unsigned char* buf, int count)
 {
-	int rc = recv(mysock, buf, count, 0);
+	int rc = recv(my_sock, buf, count, 0);
 	//printf("received %d bytes count %d\n", rc, (int)count);
 	return rc;
 }
@@ -146,7 +146,7 @@ removing indirections
 */
 //int transport_open(char* addr, int port)
 //{
-//int* sock = &mysock;
+//int* sock = &my_sock;
 //	int type = SOCK_STREAM;
 //	struct sockaddr_in address;
 //#if defined(AF_INET6)
@@ -222,18 +222,18 @@ removing indirections
 //	#endif
 //		}
 //	}
-//	if (mysock == INVALID_SOCKET)
+//	if (my_sock == INVALID_SOCKET)
 //		return rc;
 
 //	tv.tv_sec = 1;  /* 1 second Timeout */
 //	tv.tv_usec = 0;  
-//	setsockopt(mysock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(struct timeval));
-//	return mysock;
+//	setsockopt(my_sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(struct timeval));
+//	return my_sock;
 //}
 
 int transport_open(char* addr, int port)
 {
-	int* sock = &mysock;
+	int* sock = &my_sock;
 	struct hostent *server;
 	struct sockaddr_in serv_addr;
 	static struct  timeval tv;
@@ -259,9 +259,9 @@ int transport_open(char* addr, int port)
 	}
 	tv.tv_sec = 10;  /* 1 second Timeout */
 	tv.tv_usec = 0; 
-	setsockopt(mysock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout,sizeof(timeout));
+	setsockopt(my_sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout,sizeof(timeout));
 
-    return mysock;
+    return my_sock;
 }
 
 int transport_close(int sock)

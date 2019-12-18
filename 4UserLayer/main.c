@@ -22,6 +22,7 @@
  *----------------------------------------------*/
 #include "def.h"
 #include "mqtt_app.h"
+#include "mqtt_send.h"
 
 #define LOG_TAG    "main"
 #include "elog.h"
@@ -442,6 +443,10 @@ void vTaskLed(void *pvParameters)
     BEEP = 1;
     vTaskDelay(300);
     BEEP = 0;
+//    vTaskDelay(300);
+//    BEEP = 1;
+//    vTaskDelay(300);
+//    BEEP = 0;    
     
     while(1)
     {  
@@ -500,13 +505,13 @@ void vTaskKey(void *pvParameters)
 					break;				
 				/* K2键按下，打印串口操作命令 */
 				case KEY_RR_PRES:
-                
+
+                    mqttSend();
                     log_a("KEY_DOWN_K2\r\n");
 
 			
 					break;
-				case KEY_LL_PRES:
-
+				case KEY_LL_PRES:                    
                     log_i("KEY_DOWN_K3\r\n");  
 					break;
 				case KEY_OK_PRES:    
@@ -535,15 +540,13 @@ void vTaskKey(void *pvParameters)
 
 void vTaskMqttTest(void *pvParameters)
 {
-
-
     mqtt_thread();
 
     while(1)
     {
         vTaskDelay(500);        
     }
-
+    
 }
 
 
@@ -687,46 +690,6 @@ void vTaskHandShake(void *pvParameters)
     send_to_host(HANDSHAKE,bcdbuf,6);  
     
     vTaskDelete( NULL ); //删除自己
-
-
-//    uint32_t i_boot_times = NULL;
-//    char *c_old_boot_times, c_new_boot_times[12] = {0};
-//    
-
-//    g500usCount = 1000*10;
-
-//    c_old_boot_times = ef_get_env("boot_times");
-
-//    DBG("1.c_old_boot_times = %s\r\n",c_old_boot_times);
-
-//    while(1)
-//    {
-//        if(g500usCount == 0)
-//        {
-//            break;
-//        }
-//        /* get the boot count number from Env */
-//        c_old_boot_times = ef_get_env("boot_times");
-//        assert_param(c_old_boot_times);
-//        i_boot_times = atol(c_old_boot_times);
-//        
-//        /* boot count +1 */
-//        i_boot_times ++;
-
-//        /* interger to string */
-//        sprintf(c_new_boot_times,"%012ld", i_boot_times);
-
-//        /* set and store the boot count number to Env */
-//        ef_set_env("boot_times", c_new_boot_times);   
-
-
-//    }
-
-//    c_old_boot_times = ef_get_env("boot_times");
-
-//    DBG("2.c_old_boot_times = %s\r\n",c_old_boot_times);    
-
-//    vTaskDelete( NULL ); //删除自己
 }
 
 
