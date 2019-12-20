@@ -24,6 +24,8 @@
 #include "tool.h"
 #include "string.h"
 #include "stdio.h"
+#include "lwip_comm.h" 
+
 /*----------------------------------------------*
  * 宏定义                                       *
  *----------------------------------------------*/
@@ -41,10 +43,12 @@
  * 内部函数原型说明                             *
  *----------------------------------------------*/
 static uint8_t * GetDevSn(void);
+static uint8_t * GetDevIP(void);
+    
 const uint8_t VersionString[] = "1.0.1";
 const uint8_t Hardversion[] = "1.0.1";
 const uint8_t SoftBulidDate[] = __DATE__ " " __TIME__;
-const uint8_t DevModel[] = "SmartChannel";
+const uint8_t DevModel[] = "ElevatorControlAPP";
 const uint8_t DevBatch[] = "20191202001";
 
 
@@ -73,4 +77,12 @@ static uint8_t * GetDevSn(void)
     return id;  
 }
 
-const DEVICEINFO_T gDevinfo = {VersionString, Hardversion,SoftBulidDate,DevModel,DevBatch,GetDevSn};
+
+static uint8_t * GetDevIP(void)
+{
+    static char localIP[16] = {0};
+    sprintf(localIP,"%d,%d,%d,%d",lwipdev.ip[0],lwipdev.ip[1],lwipdev.ip[2],lwipdev.ip[3]);
+    return localIP;
+}
+
+const DEVICEINFO_T gDevinfo = {VersionString, Hardversion,SoftBulidDate,DevModel,DevBatch,GetDevSn,GetDevIP};

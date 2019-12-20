@@ -70,6 +70,7 @@ uint8_t is_bit_set(uint16_t      value, uint16_t bit);
 void int2Str(uint8_t* str, int32_t intnum);
 int32_t str2int(const char* str);
 uint8_t bcd2byte(uint8_t ucBcd);
+void HexToStr(uint8_t *pbDest, uint8_t *pbSrc, int nLen);
 
 
 

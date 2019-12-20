@@ -16,32 +16,16 @@
 #include <stdio.h>
 #include "cJSON.h"
 #include "ini.h"
+#include "comm.h"
 
 #define LOG_TAG    "MQTTAPP"
 #include "elog.h"
 
 
-#define send_duration	20	//温度发送周期（ms）
-
-float temp = 0;
-float humid = 0;
-
-static uint32_t send_cnt = 0;
-static uint32_t recv_cnt = 0;
-
-
-
 //static int MqttDataParseAndSend(uint8_t *recvData,int (*func)(uint8_t *));
 static void MqttDataParseAndSend(uint8_t *recvData);
 static int MqttGetUpgradeUrl(uint8_t *jsonData);
-static int MqttSendDataToHost(uint8_t *jsonData);
-
-    
-
-int gConnectStatus = 0;
-int	mysock = 0;
-
-
+static int MqttSendDataToHost(uint8_t *jsonData);  
 
 void mqtt_thread(void)
 {
@@ -50,7 +34,7 @@ void mqtt_thread(void)
 	MQTTString topicString = MQTTString_initializer;
 	
 	int32_t rc = 0;
-	unsigned char buf[1024];
+	unsigned char buf[MQTT_MAX_LEN];
 	int buflen = sizeof(buf);
 	
 	
@@ -72,11 +56,11 @@ void mqtt_thread(void)
 	uint8_t t=0;
 	
 	log_d("socket connect to server\r\n");
-	mysock = transport_open((char *)HOST_NAME,HOST_PORT);
-	log_d("Sending to hostname %s port %d\r\n", HOST_NAME, HOST_PORT);
+	gMySock = transport_open((char *)HOST_NAME,HOST_PORT);
+	log_d("1.Sending to hostname %s port %d,gMySock = %d\r\n", HOST_NAME, HOST_PORT,gMySock);
 	
 	len = MQTTSerialize_disconnect((unsigned char*)buf,buflen);
-	rc = transport_sendPacketBuffer(mysock, (uint8_t *)buf, len);
+	rc = transport_sendPacketBuffer(gMySock, (uint8_t *)buf, len);
 	if(rc == len)															//
 		log_d("send DISCONNECT Successfully\r\n");
 	else
@@ -85,19 +69,16 @@ void mqtt_thread(void)
 	vTaskDelay(2500);
 	
 	log_d("socket connect to server\r\n");
-	mysock = transport_open((char *)HOST_NAME,HOST_PORT);
-	log_d("Sending to hostname %s port %d\r\n", HOST_NAME, HOST_PORT);
+	gMySock = transport_open((char *)HOST_NAME,HOST_PORT);
+	log_d("2.Sending to hostname %s port %d,gMySock = %d\r\n", HOST_NAME, HOST_PORT,gMySock);
 
-
-	data.clientID.cstring = CLIENT_ID;                   //随机
+	data.clientID.cstring = CLIENT_ID;              //随机
 	data.keepAliveInterval = KEEPLIVE_TIME;         //保持活跃
 	data.username.cstring = USER_NAME;              //用户名
 	data.password.cstring = PASSWORD;               //秘钥
 	data.MQTTVersion = MQTT_VERSION;                //3表示3.1版本，4表示3.11版本
-	data.cleansession = 1;
-    
-	unsigned char payload_out[200];
-	int payload_out_len = 0;
+	data.cleansession = 1;    
+
 
     //获取当前滴答，作为心跳包起始时间
 	uint32_t curtick  =	 xTaskGetTickCount();
@@ -135,7 +116,7 @@ void mqtt_thread(void)
 //				topicString.cstring = DEVICE_PUBLISH;		//属性上报 发布
 //				log_d("send PUBLISH buff = %s\r\n",payload_out);
 //				len = MQTTSerialize_publish((unsigned char*)buf, buflen, 0, req_qos, retained, msgid, topicString, payload_out, payload_out_len);//发布消息
-//				rc = transport_sendPacketBuffer(mysock, (unsigned char*)buf, len);
+//				rc = transport_sendPacketBuffer(gMySock, (unsigned char*)buf, len);
 //				if(rc == len)															//
 //					log_d("the %dth send PUBLISH Successfully\r\n",send_cnt++);
 //				else
@@ -148,7 +129,7 @@ void mqtt_thread(void)
 
             //连接服务端 客户端请求连接服务端
             case CONNECT:	len = MQTTSerialize_connect((unsigned char*)buf, buflen, &data); 						//获取数据组长度		发送连接信息     
-							rc = transport_sendPacketBuffer(mysock, (unsigned char*)buf, len);		//发送 返回发送数组长度
+							rc = transport_sendPacketBuffer(gMySock, (unsigned char*)buf, len);		//发送 返回发送数组长度
 							if(rc == len)															//
 								log_d("send CONNECT Successfully\r\n");
 							else
@@ -172,7 +153,7 @@ void mqtt_thread(void)
             //订阅主题 客户端订阅请求
 			case SUBSCRIBE: topicString.cstring = DEVICE_SUBSCRIBE;
 							len = MQTTSerialize_subscribe((unsigned char*)buf, buflen, 0, msgid, 1, &topicString, &req_qos);
-							rc = transport_sendPacketBuffer(mysock, (unsigned char*)buf, len);
+							rc = transport_sendPacketBuffer(gMySock, (unsigned char*)buf, len);
 							if(rc == len)
 								log_d("send SUBSCRIBE Successfully\r\n");
 							else
@@ -199,7 +180,11 @@ void mqtt_thread(void)
             //发布消息
 			case PUBLISH:	rc = MQTTDeserialize_publish(&dup, &qos, &retained, &msgid, &receivedTopic,&payload_in, &payloadlen_in, (unsigned char*)buf, buflen);	//读取服务器推送信息
 							log_d("step = %d,message arrived : %s,len= %d\r\n",PUBLISH,payload_in,strlen(payload_in));
-                            MqttDataParseAndSend(payload_in);
+//                            MqttDataParseAndSend(payload_in);
+
+                            //这里是马上执行？还是发送到消息队列中，在读消息队列中执行？
+                            //个人感觉在消息队列中会好点
+                            exec_proc((char *)GetJsonItem(payload_in,CMD_ID,0),payload_in);
 							msgtypes = 0;
 							break;
             //发布确认 QoS	1消息发布收到确认
@@ -217,7 +202,7 @@ void mqtt_thread(void)
 							break;
             //心跳请求
 			case PINGREQ:   len = MQTTSerialize_pingreq((unsigned char*)buf, buflen);							//心跳
-							rc = transport_sendPacketBuffer(mysock, (unsigned char*)buf, len);
+							rc = transport_sendPacketBuffer(gMySock, (unsigned char*)buf, len);
 							if(rc == len)
 								log_d("send PINGREQ Successfully\r\n");
 							else
@@ -242,37 +227,12 @@ void mqtt_thread(void)
 			log_d("MQTT is get recv: msgtypes = %d\r\n",msgtypes);
 		}
 	}
-	transport_close(mysock);
+	transport_close(gMySock);
     log_d("mqtt thread exit.\r\n");
 }
 
 
 
-/*
-// C prototype : void HexToStr(BYTE *pbDest, BYTE *pbSrc, int nLen)
-// parameter(s): [OUT] pbDest - 存放目标字符串
-// [IN] pbSrc - 输入16进制数的起始地址
-// [IN] nLen - 16进制数的字节数
-// return value: 
-// remarks : 将16进制数转化为字符串
-*/
-void HexToStr(uint8_t *pbDest, uint8_t *pbSrc, int nLen)
-{
-	char ddl,ddh;
-	int i;
-
-	for (i=0; i<nLen; i++)
-	{
-		ddh = 48 + pbSrc[i] / 16;
-		ddl = 48 + pbSrc[i] % 16;
-		if (ddh > 57) ddh = ddh + 7;
-		if (ddl > 57) ddl = ddl + 7;
-		pbDest[i*2] = ddh;
-		pbDest[i*2+1] = ddl;
-	}
-
-	pbDest[nLen*2] = '\0';
-}
 
 
 //这里可以使用表驱动法，把每个操作放在结构体数组中，目前暂只作升级和远程开门
@@ -320,109 +280,11 @@ static void MqttDataParseAndSend(uint8_t *recvData)
         }         
     }  
     cJSON_Delete(json);
-    cJSON_Delete(json_params);
-    cJSON_Delete(json_cmd);
-    cJSON_Delete(json_sw);     
-    
+
 }
 
-//static int SaveUpNackParam(uint8_t *jsonData)
-//{
-//    int cmd = 0;
-//    cJSON *jsonObj,*dataObj;    
-//    cJSON *root , *json_params, *json_cmd, *json_sw;
-//    cJSON *json_id,*json_status,*json_deviceCode,*json_productionModel,*json_version,*json_softwareFirmware,*json_versionType,*json_commandCode;
-//    char *up_status,*TxdBuf;
-
-//    jsonObj=cJSON_CreateObject(); // 创建dataobj对象，返回值为cJSON指针
-
-//    if (!jsonObj)  
-//    {  
-//        log_d("jsonObj Error before: [%s]\r\n",cJSON_GetErrorPtr());  
-//    } 
-//    cJSON_AddItemToObject (jsonObj,"data",dataObj); 
-//        
-//    root = cJSON_Parse((char *)jsonData);         //解析数据包
-//    if (!root)  
-//    {  
-//        log_d("Error before: [%s]\r\n",cJSON_GetErrorPtr());  
-//    } 
-//    else
-//    {
-//        log_d("jsonData = %s\r\n",jsonData);
-//                
-//        
-//        json_cmd = cJSON_GetObjectItem(root , "commandCode"); 
-//        json_deviceCode = cJSON_GetObjectItem( root , "deviceCode" );
-//        if(json_cmd->type == cJSON_String)
-//        {
-//            log_d("commandCode:%s\r\n", json_cmd->valuestring);  
-//        }
-
-//        json_params = cJSON_GetObjectItem( root , "data" );        
-//        json_id = cJSON_GetObjectItem( json_params , "id" );
-//        json_status = cJSON_GetObjectItem( json_params , "status" );
-//        json_productionModel = cJSON_GetObjectItem( json_params , "productionModel" );
-//        json_version = cJSON_GetObjectItem( json_params , "version" );
-//        json_softwareFirmware = cJSON_GetObjectItem( json_params , "softwareFirmware" );
-//        json_versionType = cJSON_GetObjectItem( json_params , "versionType" );
 
 
-//        cJSON_AddStringToObject(jsonObj,"commandCode",json_cmd->valuestring);
-//         log_d("json_cmd->string = %s\r\n",json_cmd->valuestring);
-//         
-//        cJSON_AddStringToObject(jsonObj,"deviceCode",json_deviceCode->valuestring);  
-//         log_d("json_deviceCode->string = %s\r\n",json_deviceCode->valuestring); 
-
-//         
-//         log_d("json_productionModel->string = %s\r\n",json_productionModel->valuestring);         
-//        cJSON_AddStringToObject(dataObj,"productionModel",json_productionModel->valuestring);
-
-//        log_d("json_version->string = %s\r\n",json_version->valuestring);
-//        cJSON_AddStringToObject(dataObj,"version",json_version->valuestring);
-//        
-//        log_d("json_softwareFirmware->string = %s\r\n",json_softwareFirmware->valuestring);
-//        cJSON_AddStringToObject(dataObj,"softwareFirmware",json_softwareFirmware->valuestring);
-
-//        
-//        log_d("json_versionType->string = %s\r\n",json_versionType->valuestring);
-//        cJSON_AddStringToObject(dataObj,"versionType",json_versionType->valuestring); 
-//        
-//        log_d("json_id->valueint = %d\r\n",json_id->valueint);         
-//        cJSON_AddNumberToObject(dataObj,"id",json_id->valueint);   
-//        
-//        up_status = ef_get_env("up_status");
-
-//        log_d("up_status = %s\r\n",up_status);
-
-//        if(memcmp(up_status,"101711",6) == 0)
-//            cJSON_AddStringToObject(dataObj,"status","1");
-//        else
-//            cJSON_AddStringToObject(dataObj,"status","2");
-
-//        TxdBuf = cJSON_PrintUnformatted(root); 
-//        
-//        if(TxdBuf == NULL)
-//        {
-//            return 0;
-//        }          
-
-
-//        ef_set_env("upData",TxdBuf);        
-//        
-//        log_d("send json data = %s\r\n",TxdBuf);
-
-//        cJSON_Delete(jsonObj);
-//        cJSON_Delete(root);
-//        cJSON_Delete(dataObj);
-
-//        my_free(up_status);
-//        my_free(TxdBuf); 
-//    }
-
-//    
-
-//}
 
 
 
@@ -432,9 +294,9 @@ static int MqttSendDataToHost(uint8_t *jsonData)
     
 	uint32_t len = 0;
 	int32_t rc = 0;
-	unsigned char buf[1024];
+	unsigned char buf[MQTT_MAX_LEN];
 	int buflen = sizeof(buf);
-	unsigned char payload_out[200];
+	unsigned char payload_out[MQTT_MAX_LEN];
 	int payload_out_len = 0;
 
 	unsigned short msgid = 1;
@@ -449,7 +311,7 @@ static int MqttSendDataToHost(uint8_t *jsonData)
        topicString.cstring = DEVICE_PUBLISH;       //属性上报 发布
        log_d("send PUBLISH buff = %s\r\n",payload_out);
        len = MQTTSerialize_publish((unsigned char*)buf, buflen, 0, req_qos, retained, msgid, topicString, payload_out, payload_out_len);//发布消息
-       rc = transport_sendPacketBuffer(mysock, (unsigned char*)buf, len);
+       rc = transport_sendPacketBuffer(gMySock, (unsigned char*)buf, len);
        if(rc == len)                                                           //
            log_d("send PUBLISH Successfully\r\n");
        else
@@ -483,8 +345,7 @@ static int MqttGetUpgradeUrl(uint8_t *jsonData)
     }  
 
     
-    cJSON_Delete(json);
-    cJSON_Delete(json_url);   
+    cJSON_Delete(json); 
     
     return 0;
 }

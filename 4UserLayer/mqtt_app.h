@@ -16,6 +16,8 @@
 #define DEVICE_SECRET  	"vfW2KtmvfGy9AcBwNY9h4wksJifwt2Lf"				//设备密钥，与DeviceName成对出现，可用于一机一密的认证方案
 
 
+#define CMD_ID   "commandCode"
+
 
 #define   KEEPLIVE_TIME   50
 #define   MQTT_VERSION    4
@@ -42,10 +44,6 @@
 #define   HOST_NAME       "192.168.110.78"     //服务器IP地址 线下 
 #define   HOST_PORT     1883    //由于是TCP连接，端口必须是1883
 
-extern int gConnectStatus;
-
-extern int	mysock;
-
 //typedef int(*ptr)(uint8_t *jsonData); //获取SN的回调
 
 
@@ -59,6 +57,11 @@ extern int	mysock;
 
 void mqtt_thread(void);
 //u32 PublishData(float temp, float humid, unsigned char *payloadbuf);
+
+
+
+
+
 
 #endif
 

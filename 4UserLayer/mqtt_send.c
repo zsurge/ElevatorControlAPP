@@ -54,9 +54,8 @@
  * 内部函数原型说明                             *
  *----------------------------------------------*/
 static void upgradeDataPacket(const uint8_t *jsonbuff,uint8_t *outBuf);
-static int print_preallocated(cJSON *root);
 
-
+#if 0
 void mqttSend(void)
 {
     MQTTString topicString = MQTTString_initializer;
@@ -90,7 +89,7 @@ void mqttSend(void)
         topicString.cstring = DEVICE_PUBLISH;       //属性上报 发布
 
         len = MQTTSerialize_publish((unsigned char*)buf, buflen, 0, req_qos, retained, msgid, topicString, payload_out, payload_out_len);//发布消息
-        rc = transport_sendPacketBuffer(mysock, (unsigned char*)buf, len);
+        rc = transport_sendPacketBuffer(gMySock, (unsigned char*)buf, len);
         if(rc == len)                                                           //
             printf("send PUBLISH Successfully\r\n");
         else
@@ -172,75 +171,9 @@ static void upgradeDataPacket(const uint8_t *jsonbuff,uint8_t *outBuf)
     my_free(tmpBuf);
 }
 
+#endif
 
 
-/* Create a bunch of objects as demonstration. */
-static int print_preallocated(cJSON *root)
-{
-    /* declarations */
-    char *out = NULL;
-    char *buf = NULL;
-    char *buf_fail = NULL;
-    size_t len = 0;
-    size_t len_fail = 0;
-
-    /* formatted print */
-    out = cJSON_Print(root);
-
-    printf("cJSON_Print = %s\r\n",out);
-
-    /* create buffer to succeed */
-    /* the extra 5 bytes are because of inaccuracies when reserving memory */
-    len = strlen(out) + 5;
-    buf = (char*)my_malloc(len);
-    if (buf == NULL)
-    {
-        printf("Failed to allocate memory.\n");
-        exit(1);
-    }
-
-    /* create buffer to fail */
-    len_fail = strlen(out);
-    buf_fail = (char*)my_malloc(len_fail);
-    if (buf_fail == NULL)
-    {
-        printf("Failed to allocate memory.\n");
-        exit(1);
-    }
-
-    /* Print to buffer */
-    if (!cJSON_PrintPreallocated(root, buf, (int)len, 1)) {
-        printf("cJSON_PrintPreallocated failed!\n");
-        if (strcmp(out, buf) != 0) {
-            printf("cJSON_PrintPreallocated not the same as cJSON_Print!\n");
-            printf("cJSON_Print result:\n%s\n", out);
-            printf("cJSON_PrintPreallocated result:\n%s\n", buf);
-        }
-        my_free(out);
-        my_free(buf_fail);
-        my_free(buf);
-        return -1;
-    }
-
-    /* success */
-    printf("%s\n", buf);
-
-    /* force it to fail */
-    if (cJSON_PrintPreallocated(root, buf_fail, (int)len_fail, 1)) {
-        printf("cJSON_PrintPreallocated failed to show error with insufficient memory!\n");
-        printf("cJSON_Print result:\n%s\n", out);
-        printf("cJSON_PrintPreallocated result:\n%s\n", buf_fail);
-        my_free(out);
-        my_free(buf_fail);
-        my_free(buf);
-        return -1;
-    }
-
-    my_free(out);
-    my_free(buf_fail);
-    my_free(buf);
-    return 0;
-}
 
 
 

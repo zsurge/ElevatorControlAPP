@@ -15,6 +15,7 @@ typedef struct
     const uint8_t *Model;        //设备型号
     const uint8_t *ProductBatch; //生产批次
     CallBackFun GetSn; //获取当前设备SN    
+    CallBackFun GetIP; //获取当前设备IP  
 }DEVICEINFO_T;
 
 extern const DEVICEINFO_T gDevinfo;

@@ -31,21 +31,20 @@
 typedef enum {
     NO_ERR = 0,
     //系统异常类错误代码
+    CMD_EMPTY_ERR,
+    STR_EMPTY_ERR,
     CJSON_PACKET_ERR,   //cjson 打包失败
     CJSON_PARSE_ERR,    //cjson 解析失败
     CJSON_GETITEM_ERR,  //cjson 获取员素失败    
+    CJSON_CREATE_ERR,   //创建cjson对象失败
+    CJSON_FORMAT_ERR,   //cjson格式化失败
     COMM_PARSE_ERR,     //指令解析失败
     COMM_CRC_ERR,      //解析指令，CRC校验失败
-    FLASH_W_ERR,        //写FLASH失败
-    CJSON_CREATE_ERR = 512,   //创建cjson对象失败
+    FLASH_W_ERR,        //写FLASH失败    
+    RET_OK = 200,       //给服务器返回OK  
     //韦根读卡错误代码
     READ_ERR = 1000,
-    //QR扫码器错误代码
-    //A门电机错误代码
-    //B门电机错误代码   
-    //错误代码大于2000，上位机会发复位指令
-
-} SYSERRORCODE_E;
+}SYSERRORCODE_E;
 
 /*----------------------------------------------*
  * 常量定义                                     *

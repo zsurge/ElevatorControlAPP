@@ -362,6 +362,31 @@ int32_t str2int(const char* str)
 	return temp;
 }
 
+/*
+// C prototype : void HexToStr(BYTE *pbDest, BYTE *pbSrc, int nLen)
+// parameter(s): [OUT] pbDest - 存放目标字符串
+// [IN] pbSrc - 输入16进制数的起始地址
+// [IN] nLen - 16进制数的字节数
+// return value: 
+// remarks : 将16进制数转化为字符串
+*/
+void HexToStr(uint8_t *pbDest, uint8_t *pbSrc, int nLen)
+{
+	char ddl,ddh;
+	int i;
+
+	for (i=0; i<nLen; i++)
+	{
+		ddh = 48 + pbSrc[i] / 16;
+		ddl = 48 + pbSrc[i] % 16;
+		if (ddh > 57) ddh = ddh + 7;
+		if (ddl > 57) ddl = ddl + 7;
+		pbDest[i*2] = ddh;
+		pbDest[i*2+1] = ddl;
+	}
+
+	pbDest[nLen*2] = '\0';
+}
 
 
 

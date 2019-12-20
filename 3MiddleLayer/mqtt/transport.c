@@ -260,7 +260,7 @@ int transport_open(char* addr, int port)
 	tv.tv_sec = 10;  /* 1 second Timeout */
 	tv.tv_usec = 0; 
 	setsockopt(my_sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout,sizeof(timeout));
-
+    
     return my_sock;
 }
 

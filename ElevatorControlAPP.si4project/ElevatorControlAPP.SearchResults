@@ -1,0 +1,16 @@
+---- up_status Matches (17 in 4 files) ----
+UpgradeDev in comm.c (4UserLayer) :     ef_set_env("up_status", "101700");
+upgradeDataPacket in jsonUtils.c (3MiddleLayer\cjson) :     char *up_status;
+upgradeDataPacket in jsonUtils.c (3MiddleLayer\cjson) :     up_status = ef_get_env("up_status");
+upgradeDataPacket in jsonUtils.c (3MiddleLayer\cjson) :     if(memcmp(up_status,"101700",6) == 0)
+upgradeDataPacket in jsonUtils.c (3MiddleLayer\cjson) :     else if(memcmp(up_status,"101711",6) == 0) //升级成功
+upgradeDataPacket in jsonUtils.c (3MiddleLayer\cjson) :     else if(memcmp(up_status,"101722",6) == 0) //升级失败
+upgradeDataPacket in jsonUtils.c (3MiddleLayer\cjson) :     else if(memcmp(up_status,"101733",6) == 0) //禁止升级
+MqttGetUpgradeUrl in mqtt_app.c (4UserLayer) :             ef_set_env("up_status", "101700");
+mqtt_send.c (4UserLayer) line 99 :             ef_set_env("up_status","101799");
+mqtt_send.c (4UserLayer) line 109 :     char *up_status;
+mqtt_send.c (4UserLayer) line 132 :     up_status = ef_get_env("up_status");
+mqtt_send.c (4UserLayer) line 135 :     if(memcmp(up_status,"101700",6) == 0)
+mqtt_send.c (4UserLayer) line 139 :     else if(memcmp(up_status,"101711",6) == 0) //升级成功
+mqtt_send.c (4UserLayer) line 143 :     else if(memcmp(up_status,"101722",6) == 0) //升级失败
+mqtt_send.c (4UserLayer) line 147 :     else if(memcmp(up_status,"101733",6) == 0) //禁止升级
