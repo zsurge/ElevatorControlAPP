@@ -50,19 +50,19 @@
 #define WG1_IN_D1_EXTI  EXTI_Line11//韦根接口
 
 #else
-#define WG1_RCC         RCC_AHB1Periph_GPIOE
-#define WG1_GPIO_PORT   GPIOE
-#define WG1_IN_D0       GPIO_Pin_12//韦根接口
-#define WG1_IN_D1       GPIO_Pin_13//韦根接口
+#define WG1_RCC         RCC_AHB1Periph_GPIOB
+#define WG1_GPIO_PORT   GPIOB
+#define WG1_IN_D0       GPIO_Pin_6//韦根接口
+#define WG1_IN_D1       GPIO_Pin_7//韦根接口
 
-#define WG1_PortSource   EXTI_PortSourceGPIOE   
+#define WG1_PortSource   EXTI_PortSourceGPIOB
 
-#define WG1_IN_D0_PinSource EXTI_PinSource12
-#define WG1_IN_D1_PinSource EXTI_PinSource13
+#define WG1_IN_D0_PinSource EXTI_PinSource6
+#define WG1_IN_D1_PinSource EXTI_PinSource7
 
 
-#define WG1_IN_D0_EXTI  EXTI_Line12//韦根接口
-#define WG1_IN_D1_EXTI  EXTI_Line13//韦根接口
+#define WG1_IN_D0_EXTI  EXTI_Line6//韦根接口
+#define WG1_IN_D1_EXTI  EXTI_Line7//韦根接口
 
 #endif
 

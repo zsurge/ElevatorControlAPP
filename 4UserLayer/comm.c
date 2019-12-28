@@ -65,6 +65,8 @@ static SYSERRORCODE_E DisableDev ( uint8_t* msgBuf ); //关闭设备
 static SYSERRORCODE_E SetDevParam ( uint8_t* msgBuf ); //设置参数
 static SYSERRORCODE_E SetJudgeMode ( uint8_t* msgBuf ); //设置识别模式
 static SYSERRORCODE_E GetDevInfo ( uint8_t* msgBuf ); //获取设备信息
+static SYSERRORCODE_E GetParam ( uint8_t* msgBuf ); //获取模板参数
+
 static char *GetCmdID ( uint8_t* msgBuf ); //获取当前指令
 
 
@@ -87,7 +89,8 @@ CMD_HANDLE_T CmdList[] =
 	{"1021", EnableDev},
 	{"1023", SetDevParam},
 	{"1024", SetJudgeMode},
-	{"1026", GetDevInfo}
+	{"1026", GetDevInfo},
+    {"3003", GetParam}
 };
 
 
@@ -316,6 +319,35 @@ int PublishData(uint8_t *payload_out,uint16_t payload_out_len)
 
    return len;
 }
+
+
+SYSERRORCODE_E GetParam ( uint8_t* msgBuf )
+{
+	SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint16_t len = 0;
+
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+//    result = modifyJsonItem(msgBuf,"openStatus","1",1,buf);
+
+//    if(result != NO_ERR)
+//    {
+//        return result;
+//    }
+
+//    len = strlen((const char*)buf);
+
+//    log_d("OpenDoor len = %d,buf = %s\r\n",len,buf);
+
+//    PublishData(buf,len);
+    
+	return result;
+}
+
 
 
 

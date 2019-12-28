@@ -74,6 +74,9 @@ void testled(uint8_t flag);
 
 void addJsonTest(void);
 
+void calcRunTime(void);
+
+
 
 
 #endif

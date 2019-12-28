@@ -151,11 +151,8 @@ static void ConfigUartNVIC(void);
 void bsp_InitUart(void)
 {
 	UartVarInit();		/* 必须先初始化全局变量,再配置硬件 */
-
 	InitHardUart();		/* 配置串口的硬件参数(波特率等) */
-#ifdef RS485TEST
 	RS485_InitTXE();	/* 配置RS485芯片的发送使能硬件，配置为推挽输出 */
-#endif
 	ConfigUartNVIC();	/* 配置串口中断 */
 }
 
@@ -513,7 +510,7 @@ void USART_SetBaudRate(USART_TypeDef* USARTx, uint32_t BaudRate)
 }
 
 
-#ifdef RS485TEST
+
 
 /* 如果是RS485通信，请按如下格式编写函数*/
 
@@ -722,7 +719,55 @@ uint8_t RS485_Recv(COM_PORT_E _ucPort,uint8_t *buf, uint8_t len)
     return len;                   //返回实际读取长度
 }
 
-#endif
+
+uint8_t RS485_RecvAtTime(COM_PORT_E _ucPort,uint8_t *buf, uint8_t len,uint32_t timeout)
+{
+    uint8_t i = 0;   
+    uint8_t recvSize = len;
+    uint8_t recvLen = 0;
+    uint8_t tmp[1] = {0};
+    UART_T *pUart;
+	pUart = ComToUart(_ucPort);
+    
+	if (pUart == 0)
+	{
+		return 0;
+	}
+    
+    if(recvSize > pUart->usRxCount)  //指定读取长度大于实际接收到的数据长度时
+    {
+        recvSize=pUart->usRxCount; //读取长度设置为实际接收到的数据长度
+    }
+    
+//    for(i=0;i<len;i++)  //拷贝接收到的数据到接收指针中
+//    {
+//        UartGetChar(pUart,buf+i);  //将数据复制到buf中
+//    }
+
+//    return len;                   //返回实际读取长度
+
+
+	g500usTimerRS485 = timeout;
+
+	while (1)
+	{
+		if (g500usTimerRS485 == 0) return recvLen;
+
+
+        UartGetChar(pUart,buf + recvLen);
+        recvLen++;
+
+//		if (UartGetChar (pUart,tmp) == 1) 
+//		{
+//			buf[recvLen++] = tmp[0];
+//		}
+
+		if (recvLen >= recvSize) return recvSize;
+	}  
+
+}
+
+
 
 /*
 *********************************************************************************************************
@@ -1456,11 +1501,11 @@ uint16_t comGetBuff(COM_PORT_E _ucPort,uint8_t *Buff, uint16_t RecvSize,uint16_t
 
 	if (RecvSize == 0) return 0;
 
-	g1msTimerUART = timeout_MilliSeconds;
+	g500usTimerUART = timeout_MilliSeconds;
 
 	while (1)
 	{
-		if (g1msTimerUART == 0) return RecvLen;
+		if (g500usTimerUART == 0) return RecvLen;
 
 		if (comGetChar (_ucPort,tmp) == 1) 
 		{

@@ -42,16 +42,7 @@
 //驱动层头文件
 #include "bsp_flash.h"
 #include "bsp_uart_fifo.h"
-
 #include "LAN8720.h"
-
-//#include "bsp_usart.h"
-//#include "bsp_usart1.h"
-//#include "bsp_usart2.h"
-
-//#include "bsp_usart3.h"
-//#include "bsp_usart4.h"
-//#include "bsp_usart5.h"
 #include "bsp_key.h"
 #include "bsp_time.h"
 #include "bsp_led.h"
@@ -63,11 +54,8 @@
 //#include "bsp_infrared_it.h"
 #include "bsp_wiegand.h"
 #include "bsp_tim_pwm.h"
-
-#ifndef RS485TEST	
-#include "bsp_rs485.h"
-#endif
-
+#include "bsp_dipSwitch.h"
+#include "bsp_digitaltube.h"
 
 
 

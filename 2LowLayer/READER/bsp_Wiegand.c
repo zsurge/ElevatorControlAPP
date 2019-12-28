@@ -86,8 +86,8 @@ void bsp_WiegandInit ( void )
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init ( &EXTI_InitStructure );
 
-	/* 配置PD10 11为中断源 */
-	NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
+	/* 配置PB6 7为中断源 */
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -95,7 +95,7 @@ void bsp_WiegandInit ( void )
 }
 
 
-void EXTI15_10_IRQHandler ( void )
+void EXTI9_5_IRQHandler ( void )
 {
 
 	if ( EXTI_GetITStatus ( WG1_IN_D0_EXTI ) != RESET ) //D0

@@ -21,12 +21,6 @@
 #define LOG_TAG    "MQTTAPP"
 #include "elog.h"
 
-
-//static int MqttDataParseAndSend(uint8_t *recvData,int (*func)(uint8_t *));
-static void MqttDataParseAndSend(uint8_t *recvData);
-static int MqttGetUpgradeUrl(uint8_t *jsonData);
-static int MqttSendDataToHost(uint8_t *jsonData);  
-
 void mqtt_thread(void)
 {
 	MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
@@ -180,7 +174,6 @@ void mqtt_thread(void)
             //发布消息
 			case PUBLISH:	rc = MQTTDeserialize_publish(&dup, &qos, &retained, &msgid, &receivedTopic,&payload_in, &payloadlen_in, (unsigned char*)buf, buflen);	//读取服务器推送信息
 							log_d("step = %d,message arrived : %s,len= %d\r\n",PUBLISH,payload_in,strlen(payload_in));
-//                            MqttDataParseAndSend(payload_in);
 
                             //这里是马上执行？还是发送到消息队列中，在读消息队列中执行？
                             //个人感觉在消息队列中会好点
@@ -220,7 +213,7 @@ void mqtt_thread(void)
 		}
 		memset(buf,0,buflen);
 		rc=MQTTPacket_read((unsigned char*)buf, buflen, transport_getdata);//轮询，读MQTT返回数据，
-		log_d("MQTTPacket_read = %d\r\n",rc);		
+//		log_d("MQTTPacket_read = %d\r\n",rc);		
 		if(rc >0)//如果有数据，进入相应状态。
 		{
 			msgtypes = rc;
@@ -234,121 +227,6 @@ void mqtt_thread(void)
 
 
 
-
-//这里可以使用表驱动法，把每个操作放在结构体数组中，目前暂只作升级和远程开门
-static void MqttDataParseAndSend(uint8_t *recvData)
-{
-    int cmd = 0;
-    cJSON *json , *json_params, *json_cmd, *json_sw;
-    json = cJSON_Parse((char *)recvData);         //解析数据包
-    if (!json)  
-    {  
-        log_d("Error before: [%s]\r\n",cJSON_GetErrorPtr());  
-    } 
-    else
-    {
-        json_cmd = cJSON_GetObjectItem(json , "commandCode"); 
-        if(json_cmd->type == cJSON_String)
-        {
-            log_d("commandCode:%s\r\n", json_cmd->valuestring);  
-        }
-
-        json_params = cJSON_GetObjectItem( json , "data" );
-
-        cmd = atoi(json_cmd->valuestring);
-
-        log_d("the cmd id =  %d\r\n",cmd);
-
-        switch(cmd)
-        {
-            case 201:    
-                    json_sw = cJSON_GetObjectItem( json_params , "identification" );
-                    MqttSendDataToHost(json_sw->valuestring);
-                    break;
-            case 1016:
-                    json_sw = cJSON_GetObjectItem( json_params , "softwareUrl" );
-                    MqttGetUpgradeUrl(json_sw->valuestring);
-            
-                    ef_set_env("upData",recvData);
-            
-                    //设置标志位并重启
-                    SystemUpdate();
-                    
-                    break;
-			default:
-				    break; 
-        }         
-    }  
-    cJSON_Delete(json);
-
-}
-
-
-
-
-
-
-static int MqttSendDataToHost(uint8_t *jsonData)
-{
-	MQTTString topicString = MQTTString_initializer;
-    
-	uint32_t len = 0;
-	int32_t rc = 0;
-	unsigned char buf[MQTT_MAX_LEN];
-	int buflen = sizeof(buf);
-	unsigned char payload_out[MQTT_MAX_LEN];
-	int payload_out_len = 0;
-
-	unsigned short msgid = 1;
-	int req_qos = 0;
-	unsigned char retained = 0;  
-
-   if(gConnectStatus == 1)
-   {
-       sprintf((char*)payload_out,"{\"commandCode\":\"201\",\"data\":{\"identification\":\"%s\",\"openStatus\":\"1\"},\"deviceCode\":\"3E51E8848A4C00863617\"}",jsonData);
- 
-       payload_out_len = strlen((char*)payload_out);
-       topicString.cstring = DEVICE_PUBLISH;       //属性上报 发布
-       log_d("send PUBLISH buff = %s\r\n",payload_out);
-       len = MQTTSerialize_publish((unsigned char*)buf, buflen, 0, req_qos, retained, msgid, topicString, payload_out, payload_out_len);//发布消息
-       rc = transport_sendPacketBuffer(gMySock, (unsigned char*)buf, len);
-       if(rc == len)                                                           //
-           log_d("send PUBLISH Successfully\r\n");
-       else
-           log_d("send PUBLISH failed\r\n");     
-      
-   }
-
-   return 0;
-}
-
-
-static int MqttGetUpgradeUrl(uint8_t *jsonData)
-{
-
-    cJSON *json , *json_url;
-    json = cJSON_Parse((char *)jsonData);         //解析数据包
-    if (!json)  
-    {  
-        log_d("Error before: [%s]\r\n",cJSON_GetErrorPtr());  
-    } 
-    else
-    {
-        json_url = cJSON_GetObjectItem(json , "picUrl"); 
-        if(json_url->type == cJSON_String)
-        {
-            log_d("picUrl:%s\r\n", json_url->valuestring);  
-
-            ef_set_env("url", json_url->valuestring);
-            ef_set_env("up_status", "101700");
-        }        
-    }  
-
-    
-    cJSON_Delete(json); 
-    
-    return 0;
-}
 
 
 

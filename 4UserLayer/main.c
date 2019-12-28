@@ -21,9 +21,7 @@
  * 包含头文件                                   *
  *----------------------------------------------*/
 #include "def.h"
-#include "mqtt_app.h"
-#include "mqtt_send.h"
-#include "comm.h"
+
 
 #define LOG_TAG    "main"
 #include "elog.h"
@@ -42,21 +40,21 @@
 #define KEY_TASK_PRIO	    ( tskIDLE_PRIORITY + 2)
 #define DISPLAY_TASK_PRIO	( tskIDLE_PRIORITY + 2)
 #define MQTT_TASK_PRIO	    ( tskIDLE_PRIORITY + 3)
-#define CMD_TASK_PRIO		( tskIDLE_PRIORITY + 4)
+#define COMM_TASK_PRIO		( tskIDLE_PRIORITY + 4)
 #define START_TASK_PRIO		( tskIDLE_PRIORITY + 5)
 
 
 
 
-#define LED_STK_SIZE 		(1024)
-#define CMD_STK_SIZE 		(1024*1)
+#define LED_STK_SIZE 		(128)
+#define COMM_STK_SIZE 		(1024*1)
 #define START_STK_SIZE 	    (512)
 #define QR_STK_SIZE 		(1024)
-#define READER_STK_SIZE     (1024)
-#define HANDSHAKE_STK_SIZE  (1024)
-#define KEY_STK_SIZE        (1024)
-#define MQTT_STK_SIZE        (1024)
-#define DISPLAY_STK_SIZE        (1024)
+#define READER_STK_SIZE     (1024*1)
+#define HANDSHAKE_STK_SIZE  (256)
+#define KEY_STK_SIZE        (1024*1)
+#define MQTT_STK_SIZE        (1024*2)
+#define DISPLAY_STK_SIZE     (512)
 
 
 
@@ -73,8 +71,9 @@
 #define TASK_BIT_7	 (1 << 7)
 #define TASK_BIT_8	 (1 << 8)
 
-//读取电机状态最大次数
-#define READ_MOTOR_STATUS_TIMES 20
+
+
+#define  QUEUE_LEN    20     /* 队列的长度，最大可包含多少个消息 */
 
 
 #define TASK_BIT_ALL ( TASK_BIT_0 | TASK_BIT_1 | TASK_BIT_2 |TASK_BIT_3|TASK_BIT_4|TASK_BIT_5|TASK_BIT_6|TASK_BIT_7|TASK_BIT_8)
@@ -84,12 +83,12 @@
  *----------------------------------------------*/
 //任务句柄
 static TaskHandle_t xHandleTaskLed = NULL;      //LED灯
-static TaskHandle_t xHandleTaskCmd = NULL;      //android通讯
+static TaskHandle_t xHandleTaskComm = NULL;      //跟主机通讯
 static TaskHandle_t xHandleTaskReader = NULL;   //韦根读卡器
 static TaskHandle_t xHandleTaskQr = NULL;       //二维码读头
 static TaskHandle_t xHandleTaskStart = NULL;    //看门狗
 static TaskHandle_t xHandleTaskHandShake = NULL;    // 握手
-static TaskHandle_t xHandleTaskKey = NULL;      //B门按键
+static TaskHandle_t xHandleTaskKey = NULL;      //按键
 static TaskHandle_t xHandleTaskMqtt = NULL;      //MQTT 测试
 static TaskHandle_t xHandleTaskDisplay = NULL;      //数码管
 
@@ -98,6 +97,7 @@ static TaskHandle_t xHandleTaskDisplay = NULL;      //数码管
 //事件句柄
 static EventGroupHandle_t xCreatedEventGroup = NULL;
 SemaphoreHandle_t gxMutex = NULL;
+static QueueHandle_t xTransQueue = NULL;
 
 
 
@@ -116,6 +116,8 @@ static void vTaskStart(void *pvParameters);
 static void vTaskHandShake(void *pvParameters);
 static void vTaskMqttTest(void *pvParameters);
 static void vTaskDisplay(void *pvParameters);
+static void vTaskComm(void *pvParameters);
+
 
 
 
@@ -124,9 +126,7 @@ static void AppTaskCreate(void);
 static void AppObjCreate (void);
 static void App_Printf(char *format, ...);
 static void EasyLogInit(void);
-
-
-
+void check_msg_queue(void);
 
 int main(void)
 {   
@@ -182,6 +182,15 @@ static void AppTaskCreate (void)
                 (UBaseType_t    )HANDSHAKE_TASK_PRIO,    
                 (TaskHandle_t*  )&xHandleTaskHandShake);  
 
+    //跟主机通讯
+    xTaskCreate((TaskFunction_t )vTaskComm,
+                (const char*    )"vTaskComm",       
+                (uint16_t       )COMM_STK_SIZE, 
+                (void*          )NULL,              
+                (UBaseType_t    )COMM_TASK_PRIO,    
+                (TaskHandle_t*  )&xHandleTaskComm);  
+
+
     //创建LED任务
     xTaskCreate((TaskFunction_t )vTaskLed,         
                 (const char*    )"vTaskLed",       
@@ -208,20 +217,20 @@ static void AppTaskCreate (void)
                 (TaskHandle_t*  )&xHandleTaskMqtt); 
     
     //韦根读卡器
-//    xTaskCreate((TaskFunction_t )vTaskReader,     
-//                (const char*    )"vReader",   
-//                (uint16_t       )READER_STK_SIZE, 
-//                (void*          )NULL,
-//                (UBaseType_t    )READER_TASK_PRIO,
-//                (TaskHandle_t*  )&xHandleTaskReader);    
+    xTaskCreate((TaskFunction_t )vTaskReader,     
+                (const char*    )"vReader",   
+                (uint16_t       )READER_STK_SIZE, 
+                (void*          )NULL,
+                (UBaseType_t    )READER_TASK_PRIO,
+                (TaskHandle_t*  )&xHandleTaskReader);    
 
     //二维码扫码模块
-//    xTaskCreate((TaskFunction_t )vTaskQR,     
-//                (const char*    )"vTaskQR",   
-//                (uint16_t       )QR_STK_SIZE, 
-//                (void*          )NULL,
-//                (UBaseType_t    )QR_TASK_PRIO,
-//                (TaskHandle_t*  )&xHandleTaskQr);      
+    xTaskCreate((TaskFunction_t )vTaskQR,     
+                (const char*    )"vTaskQR",   
+                (uint16_t       )QR_STK_SIZE, 
+                (void*          )NULL,
+                (UBaseType_t    )QR_TASK_PRIO,
+                (TaskHandle_t*  )&xHandleTaskQr);      
 
     //按键
     xTaskCreate((TaskFunction_t )vTaskKey,         
@@ -271,15 +280,18 @@ static void AppObjCreate (void)
         App_Printf("创建互斥信号量失败\r\n");
     }    
 
-    //创建二值信号量
-//    gBinarySem_Handle = xSemaphoreCreateBinary();
-
-//    if(gBinarySem_Handle == NULL)
-//    {
-//        App_Printf("创建二值信号量失败\r\n");
-//    }
-
-	
+    //创消息队列，存放刷卡及二维码数据
+    
+    xTransQueue = xQueueCreate((UBaseType_t ) QUEUE_LEN,/* 消息队列的长度 */
+                              (UBaseType_t ) sizeof(QUEUE_BUFF_T *));/* 消息的大小 */
+    if(xTransQueue == NULL)
+    {
+        App_Printf("创建xTransQueue消息队列失败!\r\n");
+    }
+    else
+    {
+        App_Printf("create queue success!\r\n");
+    }
 
 
 }
@@ -376,18 +388,78 @@ static void vTaskStart(void *pvParameters)
 //            if((uxBits & (TASK_BIT_8>>8)) != 0x01)
 //            {
 //                DBG("BIT_8 vTaskQueryMotor error = %04x,%02x   ,%02x \r\n",(uxBits & (TASK_BIT_8>>8)),uxBits,TASK_BIT_8);
-//            } 
-
-            
+//            }             
 		}
     }
 }
 
 
 
+static void vTaskComm(void *pvParameters)
+{
+    uint8_t recvLen = 0;
+    uint8_t buf[5+1] = {0};
+    uint8_t crc = 0;    
+    uint8_t sendBuf[64] = {0};
+    
+    QUEUE_BUFF_T *ptMsg;
+    BaseType_t xReturn = pdTRUE;/* 定义一个创建信息返回值，默认为pdPASS */
+    const TickType_t xMaxBlockTime = pdMS_TO_TICKS(200); /* 设置最大等待时间为200ms */  
+    
+    //获取当前设备的ID
+    uint16_t readID = bsp_dipswitch_read();
+
+    log_d("current dev addr =%d\r\n",readID);
+    
+    while (1)
+    {
+        recvLen = RS485_Recv(COM5,buf,MAX_CMD_LEN);
+        
+        //判定数据的有效性
+        if(recvLen != MAX_CMD_LEN || buf[0] != CMD_STX || buf[1]<1 || buf[1]>4)
+        {
+//            log_d("invalid data,continue!\r\n");
+            vTaskDelay(500); 
+            continue;
+        }
+
+        crc= xorCRC(buf,3);
+        
+        if(crc != buf[3])
+        {
+//            log_d("invalid crc,continue!\r\n");
+            vTaskDelay(500); 
+            continue;
+        }
+        
+        if(buf[1] == readID)
+        {
+            xReturn = xQueueReceive( xTransQueue,    /* 消息队列的句柄 */
+                                     (void *)&ptMsg,  /*这里获取的是结构体的地址 */
+                                     xMaxBlockTime); /* 设置阻塞时间 */
+            if(pdTRUE == xReturn)
+            {
+                //消息接收成功，发送接收到的消息
+                packetSendBuf(ptMsg,sendBuf);     
+            }
+            else
+            {
+                //发送默认数据包
+                packetDefaultSendBuf(sendBuf); //打包  
+            }
+
+            RS485_SendBuf(COM5,sendBuf,MAX_SEND_LEN);
+
+        }
+        vTaskDelay(300);
+    }
+
+}
+
+
 
 //LED任务函数 
-void vTaskLed(void *pvParameters)
+static void vTaskLed(void *pvParameters)
 {       
     uint8_t i = 0;
     BEEP = 1;
@@ -420,7 +492,7 @@ void vTaskLed(void *pvParameters)
     }
 }   
 
-void vTaskKey(void *pvParameters)
+static void vTaskKey(void *pvParameters)
 {
     
 	uint8_t ucKeyCode;
@@ -430,8 +502,12 @@ void vTaskKey(void *pvParameters)
 
     uint8_t cm4[] = { 0x02,0x7B,0x22,0x63,0x6D,0x64,0x22,0x3A,0x22,0x75,0x70,0x64,0x61,0x74,0x65,0x22,0x2C,0x22,0x76,0x61,0x6C,0x75,0x65,0x22,0x3A,0x7B,0x22,0x75,0x70,0x64,0x61,0x74,0x65,0x22,0x3A,0x22,0x41,0x37,0x22,0x7D,0x2C,0x22,0x64,0x61,0x74,0x61,0x22,0x3A,0x22,0x30,0x30,0x22,0x7D,0x03 };
 
-    
-    
+    uint32_t g_memsize;
+
+    QUEUE_BUFF_T *ptQR; 
+    /* 初始化结构体指针 */
+    ptQR = &gQueueMsg;
+                    
     while(1)
     {
         ucKeyCode = bsp_Key_Scan(0);      
@@ -451,21 +527,42 @@ void vTaskKey(void *pvParameters)
                     
 					App_Printf("\r\n任务名       运行计数         使用率\r\n");
 					vTaskGetRunTimeStats((char *)&pcWriteBuffer);
-					App_Printf("%s\r\n", pcWriteBuffer);                    
+					App_Printf("%s\r\n", pcWriteBuffer);          
+
+                    g_memsize = xPortGetFreeHeapSize();
+                    printf("系统当前内存大小为 %d 字节，开始申请内存\n",g_memsize);
+                    
 					break;				
 				/* K2键按下，打印串口操作命令 */
-				case KEY_RR_PRES:
+				case KEY_RR_PRES:                 
+                    check_msg_queue();
+//                    ef_print_env();
+                    log_d("read gpio = %02x",bsp_dipswitch_read());
 
-                    exec_proc("1017", " ");
-                    log_a("KEY_DOWN_K2\r\n");
-
-			
+//			        ef_env_set_default();
 					break;
-				case KEY_LL_PRES:                    
-                    log_i("KEY_DOWN_K3\r\n");  
+				case KEY_LL_PRES:       
+//                    calcRunTime();
+
+                    /* 使用消息队列实现指针变量的传递 */
+                    if(xQueueSend(xTransQueue,              /* 消息队列句柄 */
+                                 (void *) &ptQR,   /* 发送指针变量recv_buf的地址 */
+                                 (TickType_t)50) != pdPASS )
+                    {
+                        DBG("the queue is full!\r\n");   
+                        xQueueReset(xTransQueue);
+                    } 
+                    else
+                    {
+                        DBG("the queue is add!\r\n"); 
+                    }     
+
+                
+
+                    log_i("KEY_DOWN_K3\r\n");
 					break;
 				case KEY_OK_PRES:    
-       
+                    test_env();
                     log_w("KEY_DOWN_K4\r\n");
                     crc_value = CRC16_Modbus(cm4, 54);
                     log_v("hi = %02x, lo = %02x\r\n", crc_value>>8, crc_value & 0xff);
@@ -488,7 +585,7 @@ void vTaskKey(void *pvParameters)
 }
 
 
-void vTaskMqttTest(void *pvParameters)
+static void vTaskMqttTest(void *pvParameters)
 {
     mqtt_thread();
 
@@ -526,67 +623,113 @@ static void vTaskDisplay(void *pvParameters)
 
 
 
-void vTaskReader(void *pvParameters)
+static void vTaskReader(void *pvParameters)
 { 
     uint32_t CardID = 0;
     uint8_t dat[4] = {0};
     
+    QUEUE_BUFF_T *ptReader; 
+	/* 初始化结构体指针 */
+	ptReader = &gQueueMsg;
+	
+	/* 清零 */
+    ptReader->authorizationMode = 0;
+    ptReader->dataLen = 0;
+    memset(ptReader->data,0x00,sizeof(ptReader->data)); 
 
     while(1)
     {
+        CardID = bsp_WeiGenScanf();
 
-//        if(FunState != 0x00)
+        if(CardID != 0)
         {
-            CardID = bsp_WeiGenScanf();
+            memset(dat,0x00,sizeof(dat));            
+            
+			dat[0] = CardID>>24;
+			dat[1] = CardID>>16;
+			dat[2] = CardID>>8;
+			dat[3] = CardID&0XFF;    
 
-            if(CardID != 0)
+            dbh("card id",(char *)dat,4);
+
+            ptReader->authorizationMode = AUTH_READER;
+            ptReader->dataLen = 4;
+            memcpy(ptReader->data,dat,4);
+
+			/* 使用消息队列实现指针变量的传递 */
+			if(xQueueSend(xTransQueue,              /* 消息队列句柄 */
+						 (void *) &ptReader,   /* 发送结构体指针变量ptReader的地址 */
+						 (TickType_t)50) != pdPASS )
+			{
+                DBG("the queue is full!\r\n");                             
+            } 
+            else
             {
-                memset(dat,0x00,sizeof(dat));            
-                
-    			dat[0] = CardID>>24;
-    			dat[1] = CardID>>16;
-    			dat[2] = CardID>>8;
-    			dat[3] = CardID&0XFF;    
-            }  
-        }
+//                dbh("WGREADER",(char *)dat,4);
+            }
+            
+        }     
 
-
-		/* 发送事件标志，表示任务正常运行 */        
-		xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_4);        
-        
-        vTaskDelay(100);
-        
+//    	/* 发送事件标志，表示任务正常运行 */        
+//    	xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_4);       
+//        
+        vTaskDelay(100);        
     }
 
 }   
 
 
-void vTaskQR(void *pvParameters)
+static void vTaskQR(void *pvParameters)
 { 
-    uint8_t recv_buf[256] = {0};
-    uint16_t len = 0;  
-    
+    uint8_t recv_buf[255] = {0};
+    uint16_t len = 0; 
 
+    QUEUE_BUFF_T *ptQR; 
+ 	/* 初始化结构体指针 */
+	ptQR = &gQueueMsg;
+	
+	/* 清零 */
+    ptQR->authorizationMode = 0;
+    ptQR->dataLen = 0;
+    memset(ptQR->data,0x00,sizeof(ptQR->data));
+  
     
     while(1)
     {   
            memset(recv_buf,0x00,sizeof(recv_buf));
-           len = comRecvBuff(COM3,recv_buf,sizeof(recv_buf));
-
-           if(len > 0  && recv_buf[len-1] == 0x0A && recv_buf[len-2] == 0x0D)
+//           len = RS485_Recv(COM4,recv_buf,sizeof(recv_buf));
+           len = RS485_RecvAtTime(COM4,recv_buf,sizeof(recv_buf),800);
+//           if(len > 0  && recv_buf[len-1] == 0x0A && recv_buf[len-2] == 0x0D)
+           if(len > 0)
            {
-                DBG("QR = %s\r\n",recv_buf);             
+                DBG("QR = %s\r\n",recv_buf);      
+
+                ptQR->authorizationMode = AUTH_QR;
+                ptQR->dataLen = len;
+                memcpy(ptQR->data,recv_buf,4);
+
+    			/* 使用消息队列实现指针变量的传递 */
+    			if(xQueueSend(xTransQueue,              /* 消息队列句柄 */
+    						 (void *) &ptQR,   /* 发送指针变量recv_buf的地址 */
+    						 (TickType_t)50) != pdPASS )
+    			{
+                    DBG("the queue is full!\r\n");                
+                } 
+                else
+                {
+                    dbh("QR",(char *)recv_buf,len);
+                }                
            }
     
 
 		/* 发送事件标志，表示任务正常运行 */        
 		xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_5);  
-        vTaskDelay(500);        
+        vTaskDelay(600);        
     }
 }   
 
 
-void vTaskHandShake(void *pvParameters)
+static void vTaskHandShake(void *pvParameters)
 {
     uint32_t i_boot_times = NULL;
     char *c_old_boot_times, c_new_boot_times[12] = {0};
@@ -645,9 +788,6 @@ static void  App_Printf(char *format, ...)
 }
 
 
-
-
-
 static void EasyLogInit(void)
 {
     /* initialize EasyLogger */
@@ -666,4 +806,18 @@ static void EasyLogInit(void)
 }
 
 
+//查询Message_Queue队列中的总队列数量和剩余队列数量
+void check_msg_queue(void)
+{
+    
+	u8 msgq_remain_size;	//消息队列剩余大小
+    u8 msgq_total_size;     //消息队列总大小
+    
+    taskENTER_CRITICAL();   //进入临界区
+    msgq_remain_size=uxQueueSpacesAvailable(xTransQueue);//得到队列剩余大小
+    msgq_total_size=uxQueueMessagesWaiting(xTransQueue)+uxQueueSpacesAvailable(xTransQueue);//得到队列总大小，总大小=使用+剩余的。
+	printf("Total Size = %d, Remain Size = %d\r\n",msgq_total_size,msgq_remain_size);	//显示DATA_Msg消息队列总的大小
+
+    taskEXIT_CRITICAL();    //退出临界区
+}
 

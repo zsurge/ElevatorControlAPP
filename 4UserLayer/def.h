@@ -51,6 +51,10 @@
 #include "comm.h"
 #include "version.h"
 
+#include "mqtt_app.h"
+#include "mqtt_send.h"
+#include "rs485_process.h"
+
 
 /*
 *********************************************************************************************************

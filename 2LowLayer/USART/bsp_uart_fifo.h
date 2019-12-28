@@ -41,7 +41,7 @@
 #define	UART1_FIFO_EN	0
 #define	UART2_FIFO_EN	1
 #define	UART3_FIFO_EN	1
-#define	UART4_FIFO_EN	0
+#define	UART4_FIFO_EN	1
 #define	UART5_FIFO_EN	0
 #define	UART6_FIFO_EN	0
 
@@ -50,7 +50,7 @@
 #define UART1_RS485_EN	0
 #define	UART2_RS485_EN	0
 #define	UART3_RS485_EN	0
-#define	UART4_RS485_EN	0
+#define	UART4_RS485_EN	1
 #define	UART5_RS485_EN	0
 #define	UART6_RS485_EN	0
 
@@ -102,7 +102,7 @@ typedef enum
 #endif
 
 #if UART4_FIFO_EN == 1
-	#define UART4_BAUD			38400
+	#define UART4_BAUD			9600
 	#define UART4_TX_BUF_SIZE	1*1024
 	#define UART4_RX_BUF_SIZE	1*1024
 #endif
@@ -153,19 +153,17 @@ void comClearRxFifo(COM_PORT_E _ucPort);
 void comSetBaud(COM_PORT_E _ucPort, uint32_t _BaudRate);
 void USART_SetBaudRate(USART_TypeDef* USARTx, uint32_t BaudRate);
 
-
-
-#ifdef RS485TEST
-
 void RS485_InitTXE(void);
 void RS485_SendBuf(COM_PORT_E _ucPort,uint8_t *_ucaBuf, uint16_t _usLen);
 void RS485_SendStr(COM_PORT_E _ucPort,char *_pBuf);
 void RS485_SetBaud(COM_PORT_E _ucPort,uint32_t _baud);
 
 uint8_t RS485_Recv(COM_PORT_E _ucPort,uint8_t *buf, uint8_t len);
+uint8_t RS485_RecvAtTime(COM_PORT_E _ucPort,uint8_t *buf, uint8_t len,uint32_t timeout);
 
 
-#endif
+
+
 
 
 #endif

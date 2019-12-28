@@ -19,7 +19,7 @@
 #define CMD_ID   "commandCode"
 
 
-#define   KEEPLIVE_TIME   50
+#define   KEEPLIVE_TIME   1500//50
 #define   MQTT_VERSION    4
 
 
@@ -38,7 +38,9 @@
 #define DEVICE_PUBLISH		"/smartCloud/server/msg/device"									//
 #define DEVICE_SUBSCRIBE	"/smartCloud/terminal/msg/3E51E8848A4C00863617"	
 
-#define DEVICE_SN           "3E51E8848A4C00863617"
+#define DEVICE_SN           //"3E51E8848A4C00863617"
+//#define DEVICE_SN           //"C7A052661C5D0CBE1E5F"
+
 
 //#define   HOST_NAME       "120.78.247.221"     //服务器IP地址 线上
 #define   HOST_NAME       "192.168.110.78"     //服务器IP地址 线下 

@@ -66,7 +66,7 @@
 //    bsp_infrared_init();      //红外传感器初始化
 
 
-//    bsp_WiegandInit();          //韦根读卡器初始化
+    bsp_WiegandInit();          //韦根读卡器初始化
 
 
 

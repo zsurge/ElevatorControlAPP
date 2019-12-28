@@ -100,48 +100,29 @@ void FlashTest(void)
 }
 
 
-
-
-
 void test_env(void)
 {
-     uint32_t i_boot_times = NULL;
-    char *c_old_boot_times, c_new_boot_times[11] = {0};
+    uint16_t i = 0;
+    uint8_t kkk[12+1] = {0};
+    uint8_t value[12+1] = {0};
+    uint32_t curtick  =  xTaskGetTickCount();
 
-    /* get the boot count number from Env */
-    c_old_boot_times = ef_get_env("boot_times");
-    assert_param(c_old_boot_times);
-    i_boot_times = atol(c_old_boot_times);
-    
-    /* boot count +1 */
-    i_boot_times ++;
-    printf("The system now boot %d times\r\n", i_boot_times);
-    /* interger to string */
-    sprintf(c_new_boot_times,"%ld", i_boot_times);
-    
-    /* set and store the boot count number to Env */
-    ef_set_env("boot_times", c_new_boot_times);
-    ef_set_env("p1","wangwu");
-    ef_set_env("p2","zhangsan");
-    ef_set_env("p3","lisi");
-
-    c_old_boot_times = ef_get_env("p1");
-    
-    DBG("p1 = %s\r\n", c_old_boot_times);
-
-    c_old_boot_times = ef_get_env("p2");
-
-    DBG("p2 = %s\r\n", c_old_boot_times);
-
-    c_old_boot_times = ef_get_env("p3");
-
-    DBG("p3 = %s\r\n", c_old_boot_times);       
+   printf("start write env\r\n");
 
     
+    for(i=1001;i<=2001;i++)
+    {
+        sprintf(kkk,"%012d",i);       
+        sprintf(value,"%012d",2001-i);
 
-    DBG("------------test_env end----------\r\n");
+        
+        ef_set_env(kkk, value);
+
+        memset(kkk,0x00,sizeof(kkk));
+        memset(value,0x00,sizeof(value));
+    }
     
-    
+    printf("end write env,calcRunTime = %d\r\n",xTaskGetTickCount()-curtick);
 }
 
 
@@ -396,5 +377,29 @@ void addJsonTest(void)
 //	}
 //    
 //}
+
+
+
+void calcRunTime(void)
+{
+    uint32_t curtick  =  xTaskGetTickCount();
+    uint16_t i = 0;
+    uint8_t kkk[12+1] = {0};
+
+    char *value;
+
+    value = ef_get_env("000000900654");
+
+    printf("read value = %s,calcRunTime = %d\r\n",value,xTaskGetTickCount()-curtick);   
+    
+     for(i=1000;i>=1;i--)
+     {
+         sprintf(kkk,"%012d",i);
+         curtick  =  xTaskGetTickCount();
+         value = ef_get_env(kkk);
+         printf("read value = %s,calcRunTime = %d\r\n",value,xTaskGetTickCount()-curtick);
+         memset(kkk,0x00,sizeof(kkk));
+     }   
+}
 
 

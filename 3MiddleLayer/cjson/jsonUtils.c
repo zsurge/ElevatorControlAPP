@@ -25,7 +25,7 @@
 /*----------------------------------------------*
  * 宏定义                                       *
  *----------------------------------------------*/
-#define JSON_ITEM_MAX_LEN   512
+#define JSON_ITEM_MAX_LEN   1024*2
 
 
 /*----------------------------------------------*
@@ -247,7 +247,6 @@ SYSERRORCODE_E PacketDeviceInfo ( const uint8_t* jsonBuff,const uint8_t* descJso
 SYSERRORCODE_E upgradeDataPacket(uint8_t *descBuf)
 {
     SYSERRORCODE_E result = NO_ERR;
-    unsigned char payload_out[1024] = {0};    
     cJSON *root ,*dataObj;
     char *up_status;    
     char *tmpBuf;
@@ -264,11 +263,8 @@ SYSERRORCODE_E upgradeDataPacket(uint8_t *descBuf)
      cJSON_AddStringToObject(root,"commandCode","1017");
 
     //获取dataobject
-    dataObj = cJSON_GetObjectItem( root , "data" ); 
+    dataObj = cJSON_GetObjectItem( root , "data" );   
     
-
-
-
     //升级失败
     if(memcmp(up_status,"101700",6) == 0)
     {
