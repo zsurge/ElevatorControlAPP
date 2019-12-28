@@ -1,5 +1,0 @@
----- vSemaphoreDelete Matches (5 in 2 files) ----
-semphr.h (5FreeRTOS\include) line 1088 :  * <pre>void vSemaphoreDelete( SemaphoreHandle_t xSemaphore );</pre>
-semphr.h (5FreeRTOS\include) line 1095 :  * \defgroup vSemaphoreDelete vSemaphoreDelete
-semphr.h (5FreeRTOS\include) line 1098 : #define vSemaphoreDelete( xSemaphore ) vQueueDelete( ( QueueHandle_t ) ( xSemaphore ) )
-sys_sem_free in sys_arch.c (6LWIP\arch) : 	vSemaphoreDelete(*sem); 
