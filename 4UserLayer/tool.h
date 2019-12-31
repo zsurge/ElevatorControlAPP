@@ -39,6 +39,10 @@
 
 #define DBG(...) dbg(__FILE__, __LINE__, __VA_ARGS__)
 
+typedef struct {
+    char **str;     //the PChar of string array
+    size_t num;     //the number of string
+}IString;
 
 
 
@@ -72,6 +76,11 @@ void int2Str(uint8_t* str, int32_t intnum);
 int32_t str2int(const char* str);
 uint8_t bcd2byte(uint8_t ucBcd);
 void HexToStr(uint8_t *pbDest, uint8_t *pbSrc, int nLen);
+
+
+void split(char *src,const char *separator,char **dest,int *num);
+
+char *strstr_t(const char *str, const char *sub_str);
 
 
 

@@ -135,9 +135,9 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>DLGUARM</Key>
-          <Name>4fz
-4fz
-/鴂a</Name>
+          <Name>郧H
+郧H
+/Z</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -154,9 +154,73 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>629</LineNumber>
+          <LineNumber>131</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134520680</Address>
+          <Address>0</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>0</BreakIfRCount>
+          <Filename>..\4UserLayer\comm.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression></Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
+          <LineNumber>174</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134431002</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\3MiddleLayer\cjson\jsonUtils.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\ElevatorControlAPP\../3MiddleLayer/cjson/jsonUtils.c\174</Expression>
+        </Bp>
+        <Bp>
+          <Number>2</Number>
+          <Type>0</Type>
+          <LineNumber>137</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134434244</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\4UserLayer\comm.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\ElevatorControlAPP\../4UserLayer/comm.c\137</Expression>
+        </Bp>
+        <Bp>
+          <Number>3</Number>
+          <Type>0</Type>
+          <LineNumber>180</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134478140</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\4UserLayer\mqtt_app.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\ElevatorControlAPP\../4UserLayer/mqtt_app.c\180</Expression>
+        </Bp>
+        <Bp>
+          <Number>4</Number>
+          <Type>0</Type>
+          <LineNumber>590</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134521352</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -165,7 +229,7 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>..\4UserLayer\main.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\ElevatorControlAPP\../4UserLayer/main.c\629</Expression>
+          <Expression>\\ElevatorControlAPP\../4UserLayer/main.c\590</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>

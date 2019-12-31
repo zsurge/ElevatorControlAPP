@@ -24,6 +24,14 @@
  * 包含头文件                                   *
  *----------------------------------------------*/
 #include "errorcode.h"
+#include "bsp_uart_fifo.h"
+#include "tool.h"
+#include "bsp_dipSwitch.h"
+#include "easyflash.h"
+#include "comm.h"
+#include "MQTTPacket.h"
+#include "transport.h"
+#include "jsonUtils.h"
 
 /*----------------------------------------------*
  * 宏定义                                       *
@@ -33,36 +41,21 @@
 #define QUEUE_BUF_LEN   64
 #define CMD_STX     0x5A
 
+#define AUTH_MODE_CARD  2
+#define AUTH_MODE_QR    7
 
-#define AUTH_QR 0
-#define AUTH_READER 1
-#define AUTH_REMOTE 2
-
+#pragma pack(1)
 typedef struct
 {
-    uint8_t userID[6];      //用户ID，根据用户ID判定是否有权限
-    uint8_t cardID[4];      //卡号
-    uint8_t authFloor[4];   //所拥有的楼层
-}USER_T;
+    uint8_t data[QUEUE_BUF_LEN];         //需要发送给服务器的数据
+    uint8_t authMode;                     //鉴权模式,刷卡=2；QR=7
+    uint8_t dataLen;                     //数据长度    
+}READER_BUFF_T;
+#pragma pack()
 
-typedef struct
-{
-    uint8_t currentFloor;   //当前楼层
-    uint8_t targetFloor;    //目标楼层
-    USER_T *user;
-}USER_INFO_T;
+extern READER_BUFF_T gReaderMsg;
 
 
-
-
-typedef struct
-{
-    uint8_t authorizationMode;           //刷卡，QR，远程
-    uint8_t dataLen;                     //数据长度
-    uint8_t data[QUEUE_BUF_LEN];         //需要发送给android板的数据
-}QUEUE_BUFF_T;
-
-extern QUEUE_BUFF_T gQueueMsg;
 /*----------------------------------------------*
  * 常量定义                                     *
  *----------------------------------------------*/
@@ -77,12 +70,9 @@ extern QUEUE_BUFF_T gQueueMsg;
  *----------------------------------------------*/
 
 void packetDefaultSendBuf(uint8_t *buf);
-void packetSendBuf(QUEUE_BUFF_T *pQueue,uint8_t *buf);
+void packetSendBuf(READER_BUFF_T *pQueue,uint8_t *buf);
 
-
-
-
-
+uint8_t authReader(READER_BUFF_T *pQueue,LOCAL_USER_T *localUserData);
 
 
 

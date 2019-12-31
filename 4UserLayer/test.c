@@ -110,13 +110,13 @@ void test_env(void)
    printf("start write env\r\n");
 
     
-    for(i=1001;i<=2001;i++)
+    for(i=5001;i<=10000;i++)
     {
         sprintf(kkk,"%012d",i);       
-        sprintf(value,"%012d",2001-i);
-
+        sprintf(value,"%012d",10000-i);
         
-        ef_set_env(kkk, value);
+        log_d("key = %s, value = %s\r\n",kkk,value);        
+        ef_set_env_blob(kkk, value,strlen((const char*)value));
 
         memset(kkk,0x00,sizeof(kkk));
         memset(value,0x00,sizeof(value));
@@ -400,6 +400,31 @@ void calcRunTime(void)
          printf("read value = %s,calcRunTime = %d\r\n",value,xTaskGetTickCount()-curtick);
          memset(kkk,0x00,sizeof(kkk));
      }   
+}
+
+
+int testSplit(void)
+{
+	int i;
+	char *value;
+	//用来接收返回数据的数组。这里的数组元素只要设置的比分割后的子字符串个数大就好了。
+	char *revbuf[8] = {0}; //存放分割后的子字符串 
+	
+	//分割后子字符串的个数
+	int num = 0;
+
+    value = ef_get_env("3867");
+	
+	split(value,";",revbuf,&num); //调用函数进行分割 
+	
+	
+	//输出返回的每个内容 
+	for(i = 0;i < num; i ++) {
+		printf("%s\r\n",revbuf[i]);
+	}
+
+
+	return 0;
 }
 
 

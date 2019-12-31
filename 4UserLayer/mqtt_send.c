@@ -53,7 +53,7 @@
 /*----------------------------------------------*
  * 内部函数原型说明                             *
  *----------------------------------------------*/
-static void upgradeDataPacket(const uint8_t *jsonbuff,uint8_t *outBuf);
+//static void upgradeDataPacket(const uint8_t *jsonbuff,uint8_t *outBuf);
 
 #if 0
 void mqttSend(void)

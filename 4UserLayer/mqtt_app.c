@@ -173,11 +173,11 @@ void mqtt_thread(void)
 							break;
             //发布消息
 			case PUBLISH:	rc = MQTTDeserialize_publish(&dup, &qos, &retained, &msgid, &receivedTopic,&payload_in, &payloadlen_in, (unsigned char*)buf, buflen);	//读取服务器推送信息
-							log_d("step = %d,message arrived : %s,len= %d\r\n",PUBLISH,payload_in,strlen(payload_in));
+							log_d("step = %d,message arrived : %s,len= %d\r\n",PUBLISH,payload_in,strlen((const char*)payload_in));
 
                             //这里是马上执行？还是发送到消息队列中，在读消息队列中执行？
                             //个人感觉在消息队列中会好点
-                            exec_proc((char *)GetJsonItem(payload_in,CMD_ID,0),payload_in);
+                            exec_proc((char *)GetJsonItem((const uint8_t*)payload_in,(const uint8_t*)CMD_ID,0),payload_in);
 							msgtypes = 0;
 							break;
             //发布确认 QoS	1消息发布收到确认

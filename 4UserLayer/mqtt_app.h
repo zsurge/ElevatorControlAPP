@@ -38,7 +38,7 @@
 #define DEVICE_PUBLISH		"/smartCloud/server/msg/device"									//
 #define DEVICE_SUBSCRIBE	"/smartCloud/terminal/msg/3E51E8848A4C00863617"	
 
-#define DEVICE_SN           //"3E51E8848A4C00863617"
+#define DEVICE_SN           "3E51E8848A4C00863617"
 //#define DEVICE_SN           //"C7A052661C5D0CBE1E5F"
 
 

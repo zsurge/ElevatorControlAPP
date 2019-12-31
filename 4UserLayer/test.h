@@ -76,6 +76,7 @@ void addJsonTest(void);
 
 void calcRunTime(void);
 
+int testSplit(void);
 
 
 

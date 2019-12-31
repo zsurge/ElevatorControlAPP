@@ -22,10 +22,11 @@
  *----------------------------------------------*/
 #include "jsonUtils.h"
 #include "version.h"
+
 /*----------------------------------------------*
  * 宏定义                                       *
  *----------------------------------------------*/
-#define JSON_ITEM_MAX_LEN   1024*2
+
 
 
 /*----------------------------------------------*
@@ -35,6 +36,7 @@
 /*----------------------------------------------*
  * 模块级变量                                   *
  *----------------------------------------------*/
+LOCAL_USER_T gLoalUserData;
 
 /*----------------------------------------------*
  * 内部函数原型说明                             *
@@ -165,7 +167,6 @@ uint8_t* GetJsonItem ( const uint8_t* jsonBuff,const uint8_t* item,uint8_t isSub
 		}
 		else if ( json_item->type == cJSON_Number )
 		{
-			log_d ( "json_item = :%d\r\n", json_item->valueint );
 			sprintf ( value,"%d",json_item->valueint );
 			log_d ( "json_item =  %s\r\n",value);
 		}
@@ -193,6 +194,8 @@ SYSERRORCODE_E PacketDeviceInfo ( const uint8_t* jsonBuff,const uint8_t* descJso
 	{
 		log_d ( "Error before: [%s]\r\n",cJSON_GetErrorPtr() );
         cJSON_Delete(root);
+        cJSON_Delete(newroot);
+        my_free(tmpBuf);            
 		return CJSON_PARSE_ERR;
 	}
 	else
@@ -208,6 +211,7 @@ SYSERRORCODE_E PacketDeviceInfo ( const uint8_t* jsonBuff,const uint8_t* descJso
             log_d ( "Error before: [%s]\r\n",cJSON_GetErrorPtr() );
             cJSON_Delete(root);
             cJSON_Delete(newroot);
+            my_free(tmpBuf);            
     		return CJSON_CREATE_ERR;
         }
 
@@ -228,6 +232,9 @@ SYSERRORCODE_E PacketDeviceInfo ( const uint8_t* jsonBuff,const uint8_t* descJso
         if(!tmpBuf)
         {
             log_d("cJSON_PrintUnformatted error \r\n");
+            cJSON_Delete(root);
+            cJSON_Delete(newroot);         
+            my_free(tmpBuf);            
             return CJSON_FORMAT_ERR;
         }    
 
@@ -253,8 +260,10 @@ SYSERRORCODE_E upgradeDataPacket(uint8_t *descBuf)
     
     root = cJSON_Parse((const char*)ef_get_env("upData"));    //解析数据包
     if (!root)  
-    {  
+    {          
         log_d("Error before: [%s]\r\n",cJSON_GetErrorPtr());  
+        cJSON_Delete(root);
+        my_free(tmpBuf);
         return CJSON_PARSE_ERR;
     } 
     
@@ -292,6 +301,8 @@ SYSERRORCODE_E upgradeDataPacket(uint8_t *descBuf)
     if(tmpBuf == NULL)
     {
         log_d("cJSON_PrintUnformatted error \r\n");
+        my_free(tmpBuf);
+        cJSON_Delete(root);        
         return CJSON_FORMAT_ERR;
     }    
 
@@ -307,5 +318,141 @@ SYSERRORCODE_E upgradeDataPacket(uint8_t *descBuf)
     return result;
 }
 
+
+uint8_t* packetBaseJson(uint8_t *jsonBuff)
+{
+    static uint8_t value[JSON_ITEM_MAX_LEN] = {0};
+    
+	cJSON* root,*newroot,*tmpdataObj,*json_item,*dataObj,*json_cmdCode,*json_devCode,*identification,*id;
+    char *tmpBuf;
+    
+	root = cJSON_Parse ( ( char* ) jsonBuff );    //解析数据包
+	if ( !root )
+	{
+		log_d ( "Error before: [%s]\r\n",cJSON_GetErrorPtr() );
+        
+        cJSON_Delete(root);        
+        cJSON_Delete(newroot);
+        my_free(tmpBuf);
+		return NULL;
+	}
+	else
+	{
+        json_cmdCode = cJSON_GetObjectItem ( root, "commandCode" );
+        json_devCode = cJSON_GetObjectItem ( root, "deviceCode" );
+        
+        tmpdataObj = cJSON_GetObjectItem ( root, "data" );        
+        identification = cJSON_GetObjectItem ( tmpdataObj, "identification" );
+        id = cJSON_GetObjectItem ( tmpdataObj, "id" );
+
+        newroot = cJSON_CreateObject();
+        dataObj = cJSON_CreateObject();
+        if(!newroot && !dataObj)
+        {
+            log_d ( "Error before: [%s]\r\n",cJSON_GetErrorPtr() );
+            cJSON_Delete(root);
+            cJSON_Delete(newroot);
+            my_free(tmpBuf);            
+    		return NULL;
+        }
+
+        if(json_cmdCode)
+            cJSON_AddStringToObject(newroot, "commandCode", json_cmdCode->valuestring);
+
+        if(json_devCode)
+            cJSON_AddStringToObject(newroot, "deviceCode", json_devCode->valuestring);
+
+
+        cJSON_AddItemToObject(newroot, "data", dataObj);
+        
+        if(identification)
+            cJSON_AddStringToObject(dataObj, "identification", identification->valuestring);
+
+        if(id)
+            cJSON_AddNumberToObject(dataObj, "id", id->valueint);
+
+        cJSON_AddStringToObject(dataObj, "status", "0");
+
+                
+        tmpBuf = cJSON_PrintUnformatted(newroot); 
+
+        if(!tmpBuf)
+        {
+            log_d("cJSON_PrintUnformatted error \r\n");
+
+            cJSON_Delete(root);
+            cJSON_Delete(newroot);      
+            my_free(tmpBuf);
+            return NULL;
+        }    
+
+        strcpy((char *)value,tmpBuf);
+
+	}
+
+    cJSON_Delete(root);
+
+    cJSON_Delete(newroot);
+
+    my_free(tmpBuf);
+
+
+    return value;    
+}
+
+
+uint8_t packetPayload(LOCAL_USER_T *localUserData,uint8_t *descJson)
+{
+    SYSERRORCODE_E result = NO_ERR;
+	cJSON* root,*dataObj;
+    char *tmpBuf;
+
+//    log_d("localUserData->cardNo = %s\r\n",localUserData->cardNo);
+//    log_d("localUserData->userId = %s\r\n",localUserData->userId);
+//    log_d("localUserData->accessLayer = %s\r\n",localUserData->accessLayer);
+//    log_d("localUserData->defaultLayer = %d\r\n",localUserData->defaultLayer);    
+//    log_d("localUserData->startTime = %s\r\n",localUserData->startTime);        
+//    log_d("localUserData->endTime = %s\r\n",localUserData->endTime);        
+//    log_d("localUserData->authMode = %d\r\n",localUserData->authMode);
+
+    root = cJSON_CreateObject();
+    dataObj = cJSON_CreateObject();
+
+    if(!root && !dataObj)
+    {
+        log_d ( "Error before: [%s]\r\n",cJSON_GetErrorPtr() );
+        cJSON_Delete(root);
+        my_free(tmpBuf);            
+		return CJSON_CREATE_ERR;
+    }
+
+    cJSON_AddStringToObject(root, "commandCode","3007");
+    cJSON_AddStringToObject(root, "deviceCode", "3E51E8848A4C00863617");
+
+    cJSON_AddItemToObject(root, "data", dataObj);
+
+    cJSON_AddStringToObject(dataObj, "cardNo", localUserData->cardNo);
+    cJSON_AddStringToObject(dataObj, "userId", localUserData->userId);
+    cJSON_AddNumberToObject(dataObj, "callType", localUserData->authMode);
+    cJSON_AddStringToObject(dataObj, "callElevatorTime",  "2019-12-31 11:50:00");
+    cJSON_AddStringToObject(dataObj, "status", "1");
+            
+    tmpBuf = cJSON_PrintUnformatted(root); 
+
+    if(!tmpBuf)
+    {
+        log_d("cJSON_PrintUnformatted error \r\n");
+        cJSON_Delete(root);
+        my_free(tmpBuf);            
+        return CJSON_FORMAT_ERR;
+    }    
+
+    strcpy((char *)descJson,tmpBuf);    
+
+    cJSON_Delete(root);
+    my_free(tmpBuf);
+    return result;
+
+}
 
 

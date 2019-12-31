@@ -65,9 +65,13 @@ static SYSERRORCODE_E DisableDev ( uint8_t* msgBuf ); //关闭设备
 static SYSERRORCODE_E SetDevParam ( uint8_t* msgBuf ); //设置参数
 static SYSERRORCODE_E SetJudgeMode ( uint8_t* msgBuf ); //设置识别模式
 static SYSERRORCODE_E GetDevInfo ( uint8_t* msgBuf ); //获取设备信息
-static SYSERRORCODE_E GetParam ( uint8_t* msgBuf ); //获取模板参数
+static SYSERRORCODE_E GetTemplateParam ( uint8_t* msgBuf ); //获取模板参数
+static SYSERRORCODE_E GetServerIp ( uint8_t* msgBuf ); //获取模板参数
+static SYSERRORCODE_E GetUserInfo ( uint8_t* msgBuf ); //获取用户信息
+static SYSERRORCODE_E RemoteOptDev ( uint8_t* msgBuf ); //远程呼梯
+static SYSERRORCODE_E ClearUserInof ( uint8_t* msgBuf ); //删除用户信息
 
-static char *GetCmdID ( uint8_t* msgBuf ); //获取当前指令
+static SYSERRORCODE_E ReturnDefault ( uint8_t* msgBuf ); //返回默认消息
 
 
 typedef SYSERRORCODE_E ( *cmd_fun ) ( uint8_t *msgBuf ); 
@@ -90,7 +94,11 @@ CMD_HANDLE_T CmdList[] =
 	{"1023", SetDevParam},
 	{"1024", SetJudgeMode},
 	{"1026", GetDevInfo},
-    {"3003", GetParam}
+    {"3002", GetServerIp},
+    {"3003", GetTemplateParam},
+    {"3004", GetUserInfo},   
+    {"3005", RemoteOptDev},        
+    {"3006", ClearUserInof},        
 };
 
 
@@ -115,7 +123,40 @@ SYSERRORCODE_E exec_proc ( char* cmd_id, uint8_t *msg_buf )
 	}
 	log_d ( "invalid id %s\n", cmd_id );
 
+    
+    ReturnDefault(msg_buf);
 	return result;
+}
+
+
+//这个是为了方便服务端调试，给写的默认返回的函数
+static SYSERRORCODE_E ReturnDefault ( uint8_t* msgBuf ) //返回默认消息
+{
+        SYSERRORCODE_E result = NO_ERR;
+        uint8_t buf[MQTT_MAX_LEN] = {0};
+        uint16_t len = 0;
+    
+        if(!msgBuf)
+        {
+            return STR_EMPTY_ERR;
+        }
+    
+        result = modifyJsonItem(packetBaseJson(msgBuf),"status","1",1,buf);      
+        result = modifyJsonItem(packetBaseJson(buf),"UnknownCommand","random return",1,buf);   
+    
+        if(result != NO_ERR)
+        {
+            return result;
+        }
+    
+        len = strlen((const char*)buf);
+    
+        log_d("OpenDoor len = %d,buf = %s\r\n",len,buf);
+    
+        PublishData(buf,len);
+        
+        return result;
+
 }
 
 
@@ -130,7 +171,8 @@ SYSERRORCODE_E OpenDoor ( uint8_t* msgBuf )
         return STR_EMPTY_ERR;
     }
 
-    result = modifyJsonItem(msgBuf,"openStatus","1",1,buf);
+//    result = modifyJsonItem(msgBuf,"openStatus","1",1,buf);
+    result = modifyJsonItem(packetBaseJson(msgBuf),"openStatus","1",1,buf);
 
     if(result != NO_ERR)
     {
@@ -167,27 +209,24 @@ SYSERRORCODE_E DelCardNo ( uint8_t* msgBuf )
 SYSERRORCODE_E UpgradeDev ( uint8_t* msgBuf )
 {
 	SYSERRORCODE_E result = NO_ERR;
-    uint8_t buf[MQTT_MAX_LEN] = {0};
     uint8_t tmpUrl[256] = {0};
-
-    uint16_t len = 0;
-
+    
     if(!msgBuf)
     {
         return STR_EMPTY_ERR;
     }
 
     //1.保存URL
-    strcpy(tmpUrl,GetJsonItem(msgBuf,"softwareUrl",1));
+    strcpy((char *)tmpUrl,(const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"softwareUrl",1));
     log_d("tmpUrl = %s\r\n",tmpUrl);
     
-    ef_set_env("url", GetJsonItem(tmpUrl,"picUrl",0)); 
+    ef_set_env("url", (const char*)GetJsonItem((const uint8_t *)tmpUrl,(const uint8_t *)"picUrl",0)); 
 
     //2.设置升级状态为待升级状态
     ef_set_env("up_status", "101700");
     
     //3.保存整个JSON数据
-    ef_set_env("upData", msgBuf);
+    ef_set_env("upData", (const char*)msgBuf);
     
     //4.设置标志位并重启
     SystemUpdate();
@@ -300,6 +339,8 @@ int PublishData(uint8_t *payload_out,uint16_t payload_out_len)
         return STR_EMPTY_ERR;
     }
 
+    log_d("payload_out = %s,payload_out_len = %d\r\n",payload_out,payload_out_len);
+
    if(gConnectStatus == 1)
    { 
        topicString.cstring = DEVICE_PUBLISH;       //属性上报 发布       
@@ -321,7 +362,7 @@ int PublishData(uint8_t *payload_out,uint16_t payload_out_len)
 }
 
 
-SYSERRORCODE_E GetParam ( uint8_t* msgBuf )
+SYSERRORCODE_E GetTemplateParam ( uint8_t* msgBuf )
 {
 	SYSERRORCODE_E result = NO_ERR;
     uint8_t buf[MQTT_MAX_LEN] = {0};
@@ -331,23 +372,226 @@ SYSERRORCODE_E GetParam ( uint8_t* msgBuf )
     {
         return STR_EMPTY_ERR;
     }
+    
+    result = modifyJsonItem(packetBaseJson(msgBuf),"status","1",1,buf);
 
-//    result = modifyJsonItem(msgBuf,"openStatus","1",1,buf);
+    if(result != NO_ERR)
+    {
+        return result;
+    }
 
-//    if(result != NO_ERR)
-//    {
-//        return result;
-//    }
+    len = strlen((const char*)buf);
 
-//    len = strlen((const char*)buf);
+    log_d("GetParam len = %d,buf = %s\r\n",len,buf);
 
-//    log_d("OpenDoor len = %d,buf = %s\r\n",len,buf);
-
-//    PublishData(buf,len);
+    PublishData(buf,len);
     
 	return result;
 }
 
+//获服务器IP
+static SYSERRORCODE_E GetServerIp ( uint8_t* msgBuf )
+{
+	SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint8_t ip[32] = {0};
+    uint16_t len = 0;
+
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+    //1.保存IP     
+    strcpy((char *)ip,(const char *)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"ip",1));
+    log_d("server ip = %s\r\n",ip[0]);
+
+    //影响服务器
+    result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status",(const uint8_t *)"1",1,buf);
+
+    if(result != NO_ERR)
+    {
+        return result;
+    }
+
+    len = strlen((const char*)buf);
+
+    PublishData(buf,len);
+    
+	return result;
+
+}
+
+//获取用户信息
+static SYSERRORCODE_E GetUserInfo ( uint8_t* msgBuf )
+{
+	SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint8_t userID[16] = {0};
+    uint8_t cardID[16] = {0};
+    uint8_t value[255] = {0};
+    uint8_t cardIDvalue[255] = {0};
+    uint8_t tmp[128] = {0};
+    uint16_t len = 0;
+
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+    //1.保存以userID为key的表
+    memset(userID,0x00,sizeof(userID));
+    strcpy((char *)userID,(const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"userId",1));
+    log_d("userId = %s\r\n",userID);
+    
+    //1.1 保存以card id 为key的表
+    memset(cardIDvalue,0x00,sizeof(cardIDvalue));    
+    strcpy((char *)cardIDvalue,(const char*)userID);
+    
+
+    //2.保存卡号
+    memset(value,0x00,sizeof(value));   
+    strcpy((char *)cardID,(const char *)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"cardNo",1));
+    strcpy((char *)value,(const char*)cardID);
+    log_d("cardNo = %s\r\n",value);
+    
+    
+
+    //3.保存楼层权限
+    memset(tmp,0x00,sizeof(tmp));
+    strcpy((char *)tmp,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"accessLayer",1));
+    
+    strcat((char *)value,(const char *)";");
+    strcat((char *)value,(const char*)tmp);
+
+    strcat((char *)cardIDvalue,(const char*)";");
+    strcat((char *)cardIDvalue,(const char*)tmp);    
+    log_d("accessLayer = %s\r\n",value);
+
+    //4.保存默认楼层
+    memset(tmp,0x00,sizeof(tmp));
+    strcpy((char *)tmp,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"defaultLayer",1));
+    
+    strcat((char *)value,(const char*)";");
+    strcat((char *)value,(const char*)tmp);
+
+    strcat((char *)cardIDvalue,(const char*)";");
+    strcat((char *)cardIDvalue,(const char*)tmp);      
+    log_d("defaultLayer = %s\r\n",value);
+
+    //5.保存开始时间
+    memset(tmp,0x00,sizeof(tmp));
+    strcpy((char *)tmp,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"startTime",1));
+    
+    strcat((char *)value,(const char*)";");
+    strcat((char *)value,(const char*)tmp);
+
+    strcat((char *)cardIDvalue,(const char*)";");
+    strcat((char *)cardIDvalue,(const char*)tmp); 
+    log_d("startTime = %s\r\n",value);
+
+    //6.保存结束时间
+    memset((char *)tmp,0x00,sizeof(tmp));
+    strcpy((char *)tmp,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"endTime",1));
+    
+    strcat((char *)value,(const char*)";");
+    strcat((char *)value,(const char*)tmp);
+
+    strcat((char *)cardIDvalue,(const char*)";");
+    strcat((char *)cardIDvalue,(const char*)tmp); 
+    log_d("endTime = %s\r\n",value);    
+
+    //写记录
+    if((ef_set_env((const char*)userID, (const char*)value) == EF_NO_ERR) && (ef_set_env((const char*)cardID, (const char*)cardIDvalue) == EF_NO_ERR))
+    {        
+        //影响服务器
+        result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status","1",1,buf);
+        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"reason","success",1,buf);
+    }
+    else
+    {
+        //影响服务器
+        result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status","0",1,buf);
+        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"reason","add record error",1,buf);
+    }
+    
+
+    if(result != NO_ERR)
+    {
+        return result;
+    }
+
+    len = strlen((const char*)buf);
+
+    PublishData(buf,len);
+    
+	return result;
+
+}
+
+//远程呼梯
+static SYSERRORCODE_E RemoteOptDev ( uint8_t* msgBuf )
+{
+    SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint16_t len = 0;
+
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+    result = modifyJsonItem(msgBuf,"status","1",1,buf);
+
+    if(result != NO_ERR)
+    {
+        return result;
+    }
+
+    len = strlen((const char*)buf);
+
+    log_d("RemoteOptDev len = %d,buf = %s\r\n",len,buf);
+
+    PublishData(buf,len);
+
+    //这里需要发消息到消息队列
+    
+    return result;
+
+}
 
 
+//删除用户信息
+static SYSERRORCODE_E ClearUserInof ( uint8_t* msgBuf )
+{
+    SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint16_t len = 0;
+
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+    result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status","1",1,buf);
+
+    if(result != NO_ERR)
+    {
+        return result;
+    }
+
+    len = strlen((const char*)buf);
+
+    log_d("ClearUserInof len = %d,buf = %s\r\n",len,buf);
+
+    PublishData(buf,len);
+
+
+    //清空用户信息
+    // ef_env_set_default();
+
+    
+    return result;
+
+}
 
