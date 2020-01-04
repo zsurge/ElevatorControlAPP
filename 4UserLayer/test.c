@@ -386,20 +386,48 @@ void calcRunTime(void)
     uint16_t i = 0;
     uint8_t kkk[12+1] = {0};
 
-    char *value;
+    char *tmp;
+    char value[13] = {0};
+    size_t len; 
 
-    value = ef_get_env("000000900654");
+//    value = ef_get_env("000000007654");
 
-    printf("read value = %s,calcRunTime = %d\r\n",value,xTaskGetTickCount()-curtick);   
+//    printf("read value = %s,calcRunTime = %d\r\n",value,xTaskGetTickCount()-curtick); 
+
+//    
+//    curtick  =  xTaskGetTickCount();
+//    value = ef_get_env("00000017654");
+
+//    printf("read value = %s,calcRunTime = %d\r\n",value,xTaskGetTickCount()-curtick);   
+
+//    value = ef_get_env("0000000554");
+
+//    printf("read value = %s,calcRunTime = %d\r\n",value,xTaskGetTickCount()-curtick); 
+
+    memset(value,0x00,sizeof(value));
+    printf("start timing\r\n"); 
+    curtick  =  xTaskGetTickCount();
+    len = ef_get_env_blob("000000009954", value, sizeof(value) , NULL);
+    printf("read value = %s,timer end = %d\r\n",value,xTaskGetTickCount()-curtick);       
+
+    dbh("value", value, len);
     
-     for(i=1000;i>=1;i--)
-     {
-         sprintf(kkk,"%012d",i);
-         curtick  =  xTaskGetTickCount();
-         value = ef_get_env(kkk);
-         printf("read value = %s,calcRunTime = %d\r\n",value,xTaskGetTickCount()-curtick);
-         memset(kkk,0x00,sizeof(kkk));
-     }   
+    printf("len = %d\r\n",len);  
+
+
+    curtick  =  xTaskGetTickCount();
+
+    tmp = ef_get_env("000000009955");
+
+    printf("read value = %s,calcRunTime = %d\r\n",tmp,xTaskGetTickCount()-curtick);   
+
+
+    curtick  =  xTaskGetTickCount();
+
+    ef_set_env("000000020000","000000022222");
+
+    printf("calcRunTime = %d\r\n",xTaskGetTickCount()-curtick);   
+
 }
 
 

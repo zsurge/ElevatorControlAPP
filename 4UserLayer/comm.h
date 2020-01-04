@@ -23,11 +23,41 @@
  * 包含头文件                                   *
  *----------------------------------------------*/
 #include "errorcode.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+
+
+extern QueueHandle_t xTransQueue;
 
 /*----------------------------------------------*
  * 宏定义                                       *
  *----------------------------------------------*/
 #define MQTT_MAX_LEN 1024*2
+
+#define AUTH_MODE_CARD      2
+#define AUTH_MODE_REMOTE    3
+#define AUTH_MODE_UNBIND    4
+#define AUTH_MODE_BIND      5
+
+#define AUTH_MODE_QR        7
+
+
+
+#define QUEUE_BUF_LEN   64
+
+
+
+#pragma pack(1)
+typedef struct
+{
+    uint8_t data[QUEUE_BUF_LEN];         //需要发送给服务器的数据
+    uint8_t authMode;                     //鉴权模式,刷卡=2；QR=7
+    uint8_t dataLen;                     //数据长度    
+}READER_BUFF_T;
+#pragma pack()
+
+extern READER_BUFF_T gReaderMsg;
 
 
 

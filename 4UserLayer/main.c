@@ -97,7 +97,7 @@ static TaskHandle_t xHandleTaskDisplay = NULL;      //数码管
 //事件句柄
 static EventGroupHandle_t xCreatedEventGroup = NULL;
 SemaphoreHandle_t gxMutex = NULL;
-static QueueHandle_t xTransQueue = NULL;
+
 
 
 
@@ -502,11 +502,7 @@ static void vTaskKey(void *pvParameters)
     uint8_t cm4[] = { 0x02,0x7B,0x22,0x63,0x6D,0x64,0x22,0x3A,0x22,0x75,0x70,0x64,0x61,0x74,0x65,0x22,0x2C,0x22,0x76,0x61,0x6C,0x75,0x65,0x22,0x3A,0x7B,0x22,0x75,0x70,0x64,0x61,0x74,0x65,0x22,0x3A,0x22,0x41,0x37,0x22,0x7D,0x2C,0x22,0x64,0x61,0x74,0x61,0x22,0x3A,0x22,0x30,0x30,0x22,0x7D,0x03 };
 
     uint32_t g_memsize;
-
-    READER_BUFF_T *ptQR; 
-    /* 初始化结构体指针 */
-    ptQR = &gReaderMsg;
-                    
+    
     while(1)
     {
         ucKeyCode = bsp_Key_Scan(0);      
@@ -535,28 +531,29 @@ static void vTaskKey(void *pvParameters)
 				/* K2键按下，打印串口操作命令 */
 				case KEY_RR_PRES:                 
                     check_msg_queue();
-                    uint32_t curtick  =  xTaskGetTickCount();
-                    ef_print_env();
-                    printf("ef_print_env,calcRunTime = %d\r\n",xTaskGetTickCount()-curtick); 
+                    
+//                    ef_print_env();
                     
                     log_d("read gpio = %02x\r\n",bsp_dipswitch_read());
                     testSplit();
 //                    exec_proc("201",payload_in);
 			        
 					break;
-				case KEY_LL_PRES:       
-//                    calcRunTime();
+				case KEY_LL_PRES:   
                     log_i("KEY_DOWN_K3\r\n");
                     ef_env_set_default();
+                    calcRunTime();                  
+                    
 					break;
 				case KEY_OK_PRES:    
-                    test_env();
+//                    test_env();
                     log_w("KEY_DOWN_K4\r\n");
                     crc_value = CRC16_Modbus(cm4, 54);
                     log_v("hi = %02x, lo = %02x\r\n", crc_value>>8, crc_value & 0xff);
 
-//                    ef_set_env("3867", "89E1E35D;0;0;2019-12-29;2029-12-31");
-//                    ef_set_env("89E1E35D", "3867;0;0;2019-12-29;2029-12-31");                    
+                    ef_set_env_blob("3867", "89E1E35D;10;10;2019-12-29;2029-12-31",37); 
+                    ef_set_env_blob("3896", "89E1E35D;8;8;2020-01-03;2029-12-31",35); 
+                    ef_set_env_blob("89E1E35D", "3867;8,9,10,11,12;9;2019-12-29;2029-12-31",42);                    
 					break;                
 				
 				/* 其他的键值不处理 */
@@ -677,7 +674,7 @@ static void vTaskQR(void *pvParameters)
 	ptQR = &gReaderMsg;
 	
 	/* 清零 */
-    ptQR->authMode = 2; //默认为刷卡
+    ptQR->authMode = AUTH_MODE_CARD; //默认为刷卡
     ptQR->dataLen = 0;
     memset(ptQR->data,0x00,sizeof(ptQR->data)); 
     
@@ -692,14 +689,14 @@ static void vTaskQR(void *pvParameters)
            
            if(len > 0  && recv_buf[len-1] == 0x0A && recv_buf[len-2] == 0x0D)
            {
-                DBG("QR = %s\r\n",recv_buf);      
+                log_d("reader = %s\r\n",recv_buf);      
 
                 //判定是刷卡还是QR
                 //if(strstr_t(recv_buf,"CARD") == NULL)
-                if(len != 25)
+                if(len > 50)
                 {
                     //QR
-                    ptQR->authMode = 7;
+                    ptQR->authMode = AUTH_MODE_QR;
                 }                               
 
                 ptQR->dataLen = len;                
@@ -748,7 +745,9 @@ static void vTaskHandShake(void *pvParameters)
     ef_set_env("boot_times", c_new_boot_times);    
 
     asc2bcd(bcdbuf,(uint8_t *)c_new_boot_times , 12, 0);
- 
+
+    
+    log_d("local time = %s\r\n",GetLocalTime());
     
     vTaskDelete( NULL ); //删除自己
 }

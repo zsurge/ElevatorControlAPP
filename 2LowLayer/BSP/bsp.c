@@ -44,8 +44,11 @@
 	delay_init(168);            //初始化延时函数
 
 	bsp_TIM6_Init();            //定时器6初始化
-
+	
     bsp_InitUart();
+
+
+    bsp_rtc_init();             //初始化RTC，只能放在UART后面
 
 	bsp_key_Init();             //按键初始化
 

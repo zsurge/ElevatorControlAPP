@@ -38,22 +38,7 @@
  *----------------------------------------------*/
 #define MAX_CMD_LEN 5
 #define MAX_SEND_LEN 37
-#define QUEUE_BUF_LEN   64
 #define CMD_STX     0x5A
-
-#define AUTH_MODE_CARD  2
-#define AUTH_MODE_QR    7
-
-#pragma pack(1)
-typedef struct
-{
-    uint8_t data[QUEUE_BUF_LEN];         //需要发送给服务器的数据
-    uint8_t authMode;                     //鉴权模式,刷卡=2；QR=7
-    uint8_t dataLen;                     //数据长度    
-}READER_BUFF_T;
-#pragma pack()
-
-extern READER_BUFF_T gReaderMsg;
 
 
 /*----------------------------------------------*
@@ -72,7 +57,9 @@ extern READER_BUFF_T gReaderMsg;
 void packetDefaultSendBuf(uint8_t *buf);
 void packetSendBuf(READER_BUFF_T *pQueue,uint8_t *buf);
 
-uint8_t authReader(READER_BUFF_T *pQueue,LOCAL_USER_T *localUserData);
+SYSERRORCODE_E authReader(READER_BUFF_T *pQueue,LOCAL_USER_T *localUserData);
+
+SYSERRORCODE_E authRemote(READER_BUFF_T *pQueue,LOCAL_USER_T *localUserData);
 
 
 

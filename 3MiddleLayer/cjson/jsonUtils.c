@@ -22,6 +22,7 @@
  *----------------------------------------------*/
 #include "jsonUtils.h"
 #include "version.h"
+#include "bsp_rtc.h"
 
 /*----------------------------------------------*
  * ºê¶¨Òå                                       *
@@ -371,7 +372,7 @@ uint8_t* packetBaseJson(uint8_t *jsonBuff)
         if(id)
             cJSON_AddNumberToObject(dataObj, "id", id->valueint);
 
-        cJSON_AddStringToObject(dataObj, "status", "0");
+        cJSON_AddStringToObject(dataObj, "status", "1");
 
                 
         tmpBuf = cJSON_PrintUnformatted(newroot); 
@@ -406,7 +407,6 @@ uint8_t packetPayload(LOCAL_USER_T *localUserData,uint8_t *descJson)
     SYSERRORCODE_E result = NO_ERR;
 	cJSON* root,*dataObj;
     char *tmpBuf;
-
 //    log_d("localUserData->cardNo = %s\r\n",localUserData->cardNo);
 //    log_d("localUserData->userId = %s\r\n",localUserData->userId);
 //    log_d("localUserData->accessLayer = %s\r\n",localUserData->accessLayer);
@@ -434,7 +434,7 @@ uint8_t packetPayload(LOCAL_USER_T *localUserData,uint8_t *descJson)
     cJSON_AddStringToObject(dataObj, "cardNo", localUserData->cardNo);
     cJSON_AddStringToObject(dataObj, "userId", localUserData->userId);
     cJSON_AddNumberToObject(dataObj, "callType", localUserData->authMode);
-    cJSON_AddStringToObject(dataObj, "callElevatorTime",  "2019-12-31 11:50:00");
+    cJSON_AddStringToObject(dataObj, "callElevatorTime",  GetLocalTime());
     cJSON_AddStringToObject(dataObj, "status", "1");
             
     tmpBuf = cJSON_PrintUnformatted(root); 

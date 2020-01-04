@@ -29,7 +29,7 @@
  * 宏定义                                       *
  *----------------------------------------------*/
 typedef enum {
-    NO_ERR = 0,
+    NO_ERR = 1,
     //系统异常类错误代码
     CMD_EMPTY_ERR,
     STR_EMPTY_ERR,
@@ -42,8 +42,11 @@ typedef enum {
     COMM_CRC_ERR,      //解析指令，CRC校验失败
     FLASH_W_ERR,        //写FLASH失败    
     RET_OK = 200,       //给服务器返回OK  
+    //读卡判定
+    NO_AUTHARITY_ERR,
+    READ_RECORD_ERR,
     //韦根读卡错误代码
-    READ_ERR = 1000,
+    READ_ERR,
 }SYSERRORCODE_E;
 
 /*----------------------------------------------*
