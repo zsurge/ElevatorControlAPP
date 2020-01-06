@@ -17,9 +17,12 @@
 #include "cJSON.h"
 #include "ini.h"
 #include "comm.h"
+#include "eth_cfg.h"
+
 
 #define LOG_TAG    "MQTTAPP"
 #include "elog.h"
+static void ackUp(void);
 
 void mqtt_thread(void)
 {
@@ -31,7 +34,7 @@ void mqtt_thread(void)
 	unsigned char buf[MQTT_MAX_LEN];
 	int buflen = sizeof(buf);
 	
-	
+	uint8_t upack_flag = 1;
 	int payloadlen_in;
 	unsigned char* payload_in;
 	unsigned short msgid = 1;
@@ -164,7 +167,14 @@ void mqtt_thread(void)
 								break;
 							}
 							log_d("step = %d,client subscribe:[%s]\r\n",SUBSCRIBE,topicString.cstring);
-							msgtypes = 0;
+							msgtypes = 0;    
+
+                            if(upack_flag)
+                            {
+                                upack_flag = 0;
+                                ackUp();
+                            }
+                                                        
 							break;
             //订阅确认 订阅请求报文确认
 			case SUBACK: 	rc = MQTTDeserialize_suback(&submsgid, 1, &subcount, &granted_qos, (unsigned char*)buf, buflen);	//有回执  QoS                                                     
@@ -225,6 +235,25 @@ void mqtt_thread(void)
 }
 
 
+
+
+static void ackUp(void)
+{
+    char up_status[12] = {0};
+
+    uint8_t up_status_len = 0;
+    
+    up_status_len = ef_get_env_blob("up_status", up_status, sizeof(up_status) , NULL);
+    
+    log_d("up_status = %s, up_status_len = %d\r\n",up_status,up_status_len);
+    
+    if(memcmp(up_status,"101711",6) == 0)
+    {
+       ef_set_env_blob("up_status", "101722",6);
+       exec_proc("1017","UpgradeAck");
+    }
+
+}
 
 
 

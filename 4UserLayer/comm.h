@@ -35,6 +35,7 @@ extern QueueHandle_t xTransQueue;
  *----------------------------------------------*/
 #define MQTT_MAX_LEN 1024*2
 
+
 #define AUTH_MODE_CARD      2
 #define AUTH_MODE_REMOTE    3
 #define AUTH_MODE_UNBIND    4

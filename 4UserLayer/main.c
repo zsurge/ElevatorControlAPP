@@ -35,7 +35,7 @@
 
 #define LED_TASK_PRIO	    ( tskIDLE_PRIORITY)
 #define HANDSHAKE_TASK_PRIO	( tskIDLE_PRIORITY)
-//#define READER_TASK_PRIO	( tskIDLE_PRIORITY + 1)
+#define READER_TASK_PRIO	( tskIDLE_PRIORITY + 1)
 #define QR_TASK_PRIO	    ( tskIDLE_PRIORITY + 1)
 #define KEY_TASK_PRIO	    ( tskIDLE_PRIORITY + 2)
 #define DISPLAY_TASK_PRIO	( tskIDLE_PRIORITY + 2)
@@ -50,7 +50,7 @@
 #define COMM_STK_SIZE 		(1024*1)
 #define START_STK_SIZE 	    (512)
 #define QR_STK_SIZE 		(512)
-//#define READER_STK_SIZE     (512)
+#define READER_STK_SIZE     (512)
 #define HANDSHAKE_STK_SIZE  (256)
 #define KEY_STK_SIZE        (512*1)
 #define MQTT_STK_SIZE        (1024*2)
@@ -84,7 +84,7 @@
 //任务句柄
 static TaskHandle_t xHandleTaskLed = NULL;      //LED灯
 static TaskHandle_t xHandleTaskComm = NULL;      //跟主机通讯
-//static TaskHandle_t xHandleTaskReader = NULL;   //韦根读卡器
+static TaskHandle_t xHandleTaskReader = NULL;   //韦根读卡器
 static TaskHandle_t xHandleTaskQr = NULL;       //二维码读头
 static TaskHandle_t xHandleTaskStart = NULL;    //看门狗
 static TaskHandle_t xHandleTaskHandShake = NULL;    // 握手
@@ -109,7 +109,7 @@ SemaphoreHandle_t gxMutex = NULL;
 //任务函数
 static void vTaskLed(void *pvParameters);
 static void vTaskKey(void *pvParameters);
-//static void vTaskReader(void *pvParameters);
+static void vTaskReader(void *pvParameters);
 static void vTaskQR(void *pvParameters);
 static void vTaskStart(void *pvParameters);
 //上送开机次数
@@ -125,6 +125,18 @@ static void AppObjCreate (void);
 static void App_Printf(char *format, ...);
 static void EasyLogInit(void);
 void check_msg_queue(void);
+static void DisplayDevInfo (void);
+
+static void DisplayDevInfo(void)
+{
+	printf("Softversion :%s\r\n",gDevinfo.SoftwareVersion);
+    printf("HardwareVersion :%s\r\n", gDevinfo.HardwareVersion);
+	printf("Model :%s\r\n", gDevinfo.Model);
+	printf("ProductBatch :%s\r\n", gDevinfo.ProductBatch);	    
+	printf("BulidDate :%s\r\n", gDevinfo.BulidDate);
+	printf("DevSn :%s\r\n", gDevinfo.GetSn());
+    printf("Devip :%s\r\n", gDevinfo.GetIP());
+}
 
 int main(void)
 {   
@@ -173,7 +185,6 @@ static void AppTaskCreate (void)
         lwip_comm_dhcp_creat();                             //创建DHCP任务
 #endif
 
-
     //跟android握手
     xTaskCreate((TaskFunction_t )vTaskHandShake,
                 (const char*    )"vHandShake",       
@@ -217,12 +228,12 @@ static void AppTaskCreate (void)
                 (TaskHandle_t*  )&xHandleTaskMqtt); 
     
     //韦根读卡器
-//    xTaskCreate((TaskFunction_t )vTaskReader,     
-//                (const char*    )"vReader",   
-//                (uint16_t       )READER_STK_SIZE, 
-//                (void*          )NULL,
-//                (UBaseType_t    )READER_TASK_PRIO,
-//                (TaskHandle_t*  )&xHandleTaskReader);    
+    xTaskCreate((TaskFunction_t )vTaskReader,     
+                (const char*    )"vReader",   
+                (uint16_t       )READER_STK_SIZE, 
+                (void*          )NULL,
+                (UBaseType_t    )READER_TASK_PRIO,
+                (TaskHandle_t*  )&xHandleTaskReader);    
 
     //二维码扫码模块
     xTaskCreate((TaskFunction_t )vTaskQR,     
@@ -532,7 +543,7 @@ static void vTaskKey(void *pvParameters)
 				case KEY_RR_PRES:                 
                     check_msg_queue();
                     
-//                    ef_print_env();
+                    ef_print_env();
                     
                     log_d("read gpio = %02x\r\n",bsp_dipswitch_read());
                     testSplit();
@@ -541,7 +552,7 @@ static void vTaskKey(void *pvParameters)
 					break;
 				case KEY_LL_PRES:   
                     log_i("KEY_DOWN_K3\r\n");
-                    ef_env_set_default();
+//                    ef_env_set_default();
                     calcRunTime();                  
                     
 					break;
@@ -551,9 +562,9 @@ static void vTaskKey(void *pvParameters)
                     crc_value = CRC16_Modbus(cm4, 54);
                     log_v("hi = %02x, lo = %02x\r\n", crc_value>>8, crc_value & 0xff);
 
-                    ef_set_env_blob("3867", "89E1E35D;10;10;2019-12-29;2029-12-31",37); 
-                    ef_set_env_blob("3896", "89E1E35D;8;8;2020-01-03;2029-12-31",35); 
-                    ef_set_env_blob("89E1E35D", "3867;8,9,10,11,12;9;2019-12-29;2029-12-31",42);                    
+                    ef_set_env_blob("3867", "89E1E35D;10;10;2019-12-29;2029-12-31",strlen("89E1E35D;10;10;2019-12-29;2029-12-31")); 
+                    ef_set_env_blob("3896", "89E1E35D;8;8;2020-01-03;2029-12-31",strlen("89E1E35D;8;8;2020-01-03;2029-12-31")); 
+                    ef_set_env_blob("89E1E35D", "3867;8,9,10,11,12;9;2019-12-29;2029-12-31",strlen("3867;8,9,10,11,12;9;2019-12-29;2029-12-31"));                    
 					break;                
 				
 				/* 其他的键值不处理 */
@@ -594,74 +605,83 @@ static void vTaskDisplay(void *pvParameters)
         vTaskDelay(1000);
         bsp_HC595Show(7,8,9);
         vTaskDelay(1000);
-        bsp_HC595Show('a','b','c');
-        vTaskDelay(1000);
-        bsp_HC595Show('d','e','f');     
-        vTaskDelay(1000);
-        bsp_HC595Show('a',0,1);
-        vTaskDelay(1000);
-        bsp_HC595Show('d',3,4);   
-        vTaskDelay(1000);
-        bsp_HC595Show(1,0,1);  
-        vTaskDelay(1000);
+//        bsp_HC595Show('a','b','c');
+//        vTaskDelay(1000);
+//        bsp_HC595Show('d','e','f');     
+//        vTaskDelay(1000);
+//        bsp_HC595Show('a',0,1);
+//        vTaskDelay(1000);
+//        bsp_HC595Show('d',3,4);   
+//        vTaskDelay(1000);
+//        bsp_HC595Show(1,0,1);  
+//        vTaskDelay(1000);
     }  
 
 }
 
 
 
-//static void vTaskReader(void *pvParameters)
-//{ 
-//    uint32_t CardID = 0;
-//    uint8_t dat[4] = {0};
-//    
-//    READER_BUFF_T *ptReader; 
-//	/* 初始化结构体指针 */
-//	ptReader = &gReaderMsg;
-//	
-//	/* 清零 */
-//    ptReader->dataLen = 0;
-//    memset(ptReader->data,0x00,sizeof(ptReader->data)); 
+static void vTaskReader(void *pvParameters)
+{ 
+    uint32_t CardID = 0;
+    uint8_t dat[4] = {0};
+    uint8_t asc[9] = {0};
+    uint8_t tmp[26] ={ 0x43,0x41,0x52,0x44,0x20,0x32,0x33,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x38,0x39,0x30,0x30,0x30,0x30,0x30,0x30,0x0d,0x0a };
+    READER_BUFF_T *ptReader; 
+	/* 初始化结构体指针 */
+	ptReader = &gReaderMsg;
+	
+	/* 清零 */
+    ptReader->dataLen = 0;
+    ptReader->authMode = AUTH_MODE_CARD;
+    memset(ptReader->data,0x00,sizeof(ptReader->data)); 
+    //CARD 230000000089E1E35D
+    while(1)
+    {
+        CardID = bsp_WeiGenScanf();
 
-//    while(1)
-//    {
-//        CardID = bsp_WeiGenScanf();
-
-//        if(CardID != 0)
-//        {
-//            memset(dat,0x00,sizeof(dat));            
-//            
+        if(CardID != 0)
+        {
+            memset(dat,0x00,sizeof(dat));            
+            
 //			dat[0] = CardID>>24;
-//			dat[1] = CardID>>16;
-//			dat[2] = CardID>>8;
-//			dat[3] = CardID&0XFF;    
+			dat[0] = CardID>>16;
+			dat[1] = CardID>>8;
+			dat[2] = CardID&0XFF;    
 
-//            dbh("card id",(char *)dat,4);
+            dbh("card id",(char *)dat,3);
+            
+            bcd2asc(asc, dat, 6, 0);
+            log_d("asc = %s\r\n",asc);
+            
+            memcpy(tmp+17,asc,6);
+            log_d("tmp = %s\r\n",tmp);
+            
+            ptReader->dataLen = 25;
+            memcpy(ptReader->data,tmp,ptReader->dataLen);
 
-//            ptReader->dataLen = 4;
-//            memcpy(ptReader->data,dat,ptReader->dataLen);
+			/* 使用消息队列实现指针变量的传递 */
+			if(xQueueSend(xTransQueue,              /* 消息队列句柄 */
+						 (void *) &ptReader,   /* 发送结构体指针变量ptReader的地址 */
+						 (TickType_t)50) != pdPASS )
+			{
+                DBG("the queue is full!\r\n");                             
+            } 
+            else
+            {
+                dbh("WGREADER",(char *)dat,4);
+            }          
 
-//			/* 使用消息队列实现指针变量的传递 */
-//			if(xQueueSend(xTransQueue,              /* 消息队列句柄 */
-//						 (void *) &ptReader,   /* 发送结构体指针变量ptReader的地址 */
-//						 (TickType_t)50) != pdPASS )
-//			{
-//                DBG("the queue is full!\r\n");                             
-//            } 
-//            else
-//            {
-//                dbh("WGREADER",(char *)dat,4);
-//            }
-//            
-//        }     
-
-    	/* 发送事件标志，表示任务正常运行 */        
-    	//xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_4);       
+          
+        }
         
-//        vTaskDelay(100);        
-//    }
+//    	/* 发送事件标志，表示任务正常运行 */        
+//    	//xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_4);       
+//        
+        vTaskDelay(100);        
+    }
 
-//}   
+}   
 
 
 static void vTaskQR(void *pvParameters)
@@ -729,7 +749,9 @@ static void vTaskHandShake(void *pvParameters)
     uint32_t i_boot_times = NULL;
     char *c_old_boot_times, c_new_boot_times[12] = {0};
     uint8_t bcdbuf[6] = {0};
+    
 
+    
     /* get the boot count number from Env */
     c_old_boot_times = ef_get_env("boot_times");
     assert_param(c_old_boot_times);
@@ -748,7 +770,13 @@ static void vTaskHandShake(void *pvParameters)
 
     
     log_d("local time = %s\r\n",GetLocalTime());
-    
+
+     DisplayDevInfo();
+
+     c_old_boot_times = ef_get_env("boot_times");
+     assert_param(c_old_boot_times);
+     i_boot_times = atol(c_old_boot_times);
+      
     vTaskDelete( NULL ); //删除自己
 }
 

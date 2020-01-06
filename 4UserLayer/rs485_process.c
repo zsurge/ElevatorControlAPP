@@ -30,6 +30,8 @@
 /*----------------------------------------------*
  * 宏定义                                       *
  *----------------------------------------------*/
+#define AUTO_REG            1
+#define MANUAL_REG          2
 
 /*----------------------------------------------*
  * 常量定义                                     *
@@ -44,7 +46,7 @@
  * 内部函数原型说明                             *
  *----------------------------------------------*/
 static SYSERRORCODE_E packetToElevator(LOCAL_USER_T *localUserData,uint8_t *buff);
-static void calcFloor(uint8_t layer,uint8_t *src,uint8_t *outFloor);
+static void calcFloor(uint8_t layer,uint8_t regMode,uint8_t *src,uint8_t *outFloor);
 
 
 
@@ -148,6 +150,7 @@ SYSERRORCODE_E authReader(READER_BUFF_T *pQueue,LOCAL_USER_T *localUserData)
         //读卡，-2 是减掉0D 0A
         memcpy(key,pQueue->data+pQueue->dataLen-2-CARD_NO_LEN,CARD_NO_LEN);
     }
+
    
     log_d("key = %s\r\n",key);
     
@@ -287,10 +290,10 @@ static SYSERRORCODE_E packetToElevator(LOCAL_USER_T *localUserData,uint8_t *buff
 {
     SYSERRORCODE_E result = NO_ERR;
     uint8_t oneLayer[8] = {0};
-    uint8_t tmpBuf[MAX_SEND_LEN+1] = {0};
+    static uint8_t tmpBuf[MAX_SEND_LEN+1] = {0};
     char *authLayer[64] = {0}; //权限楼层，最多64层
     int num = 0;    
-    uint8_t sendBuf[MAX_SEND_LEN+1] = {0};
+    static uint8_t sendBuf[MAX_SEND_LEN+1] = {0};
 
     uint8_t floor = 0;
 
@@ -319,7 +322,7 @@ static SYSERRORCODE_E packetToElevator(LOCAL_USER_T *localUserData,uint8_t *buff
     {
         for(i=0;i<num;i++)
         {
-            calcFloor(atoi(authLayer[i]),sendBuf,tmpBuf);
+            calcFloor(atoi(authLayer[i]),MANUAL_REG,sendBuf,tmpBuf);
             memcpy(sendBuf,tmpBuf,MAX_SEND_LEN);
         }        
     }
@@ -346,7 +349,7 @@ static SYSERRORCODE_E packetToElevator(LOCAL_USER_T *localUserData,uint8_t *buff
 //            sendBuf[div-1+8 ] = tmpFloor;
 //        }        
 
-        calcFloor(floor,sendBuf,tmpBuf);
+        calcFloor(floor,AUTO_REG,sendBuf,tmpBuf);
         dbh("tmpBuf", tmpBuf, MAX_SEND_LEN);        
     }
 
@@ -365,52 +368,46 @@ static SYSERRORCODE_E packetToElevator(LOCAL_USER_T *localUserData,uint8_t *buff
 
 
 
-static void calcFloor(uint8_t layer,uint8_t *src,uint8_t *outFloor)
+static void calcFloor(uint8_t layer,uint8_t regMode,uint8_t *src,uint8_t *outFloor)
 {
     uint8_t div = 0;
     uint8_t remainder = 0;
     uint8_t floor = layer;
     uint8_t sendBuf[MAX_SEND_LEN+1] = {0};
-    static uint8_t tmpFloor = 0;
-
-    memcpy(sendBuf,src,MAX_SEND_LEN);
+    uint8_t tmpFloor = 0;
+    uint8_t index = 0;
     
+    memcpy(sendBuf,src,MAX_SEND_LEN);
+
+//    dbh("before", sendBuf, MAX_SEND_LEN);
+        
     div = floor / 8;
-    remainder = floor / 8;
+    remainder = floor % 8;
+
+    if(regMode == AUTO_REG)
+    {
+        index = div + 8;
+    }
+    else
+    {
+        index = div;
+    }
 
     log_d("div = %d,remain = %d\r\n",div,remainder);
     
-//    if(div != 0 && remainder != 0)
-//    {            
-//       SETBIT(tmpFloor,remainder-1);
-//       sendBuf[div+8] = tmpFloor;
-//    }
-//    else if(div == 0 && remainder != 0)
-//    {
-//        SETBIT(tmpFloor,remainder-1);
-//        sendBuf[div+8] = tmpFloor;
-//    }
-//    else if(div != 0 && remainder == 0)
-//    {
-//        SETBIT(tmpFloor,8-1);
-//        sendBuf[div-1+8 ] = tmpFloor;
-//    }   
 
     if(div != 0 && remainder == 0)// 8,16,24
-    {
-        SETBIT(tmpFloor,8-1);
-        sendBuf[div-1+8 ] = tmpFloor;
+    {       
+        sendBuf[index-1] = setbit(sendBuf[index-1],8-1);
     } 
-    else //1~7 ，非8层的倍数
+    else //1~7层和非8层的倍数
     {
-        SETBIT(tmpFloor,remainder-1);
-        sendBuf[div+8] = tmpFloor;
+        sendBuf[index] = setbit(sendBuf[index],remainder-1);
     }
-
 
     memcpy(outFloor,sendBuf,MAX_SEND_LEN);
 
-    tmpFloor = 0;
+//    dbh("after", sendBuf, MAX_SEND_LEN);
 }
 
 

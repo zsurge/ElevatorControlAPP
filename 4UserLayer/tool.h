@@ -24,8 +24,7 @@
 #include "stdio.h"
 #include "stdlib.h" 
 #include <stdint.h>
-
-
+#include "stm32f4xx_conf.h"
 
 /*----------------------------------------------*
  * ∫Í∂®“Â                                       *
@@ -81,6 +80,12 @@ void HexToStr(uint8_t *pbDest, uint8_t *pbSrc, int nLen);
 void split(char *src,const char *separator,char **dest,int *num);
 
 char *strstr_t(const char *str, const char *sub_str);
+
+
+int setbit(int num, int bit);
+int clearbit(int num, int bit);
+
+void calcMac(unsigned char *mac);
 
 
 

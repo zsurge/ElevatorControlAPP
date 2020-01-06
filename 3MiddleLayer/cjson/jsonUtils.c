@@ -23,6 +23,7 @@
 #include "jsonUtils.h"
 #include "version.h"
 #include "bsp_rtc.h"
+#include "eth_cfg.h"
 
 /*----------------------------------------------*
  * 宏定义                                       *
@@ -68,6 +69,7 @@ SYSERRORCODE_E modifyJsonItem(const uint8_t *srcJson,const uint8_t *item,const u
 
     if(!srcJson)
     {
+        cJSON_Delete(root);
         log_d("error json data\r\n");
         return STR_EMPTY_ERR;
     }    
@@ -75,6 +77,7 @@ SYSERRORCODE_E modifyJsonItem(const uint8_t *srcJson,const uint8_t *item,const u
     root = cJSON_Parse((char *)srcJson);    //解析数据包
     if (!root)  
     {  
+        cJSON_Delete(root);
         log_d("Error before: [%s]\r\n",cJSON_GetErrorPtr());  
         return CJSON_PARSE_ERR;
     } 
@@ -95,6 +98,7 @@ SYSERRORCODE_E modifyJsonItem(const uint8_t *srcJson,const uint8_t *item,const u
 
     if(!tmpBuf)
     {
+        cJSON_Delete(root);
         log_d("cJSON_PrintUnformatted error \r\n");
         return CJSON_FORMAT_ERR;
     }    
@@ -284,9 +288,9 @@ SYSERRORCODE_E upgradeDataPacket(uint8_t *descBuf)
     {
         cJSON_AddStringToObject(dataObj,"status","1");
     }
-    else if(memcmp(up_status,"101722",6) == 0) //升级失败
+    else if(memcmp(up_status,"101722",6) == 0) //升级成功
     {
-        cJSON_AddStringToObject(dataObj,"status","2"); 
+        cJSON_AddStringToObject(dataObj,"status","1"); 
     }
     else if(memcmp(up_status,"101733",6) == 0) //禁止升级
     {
@@ -403,7 +407,8 @@ uint8_t* packetBaseJson(uint8_t *jsonBuff)
 
 
 uint8_t packetPayload(LOCAL_USER_T *localUserData,uint8_t *descJson)
-{
+{ 
+    
     SYSERRORCODE_E result = NO_ERR;
 	cJSON* root,*dataObj;
     char *tmpBuf;
@@ -427,7 +432,7 @@ uint8_t packetPayload(LOCAL_USER_T *localUserData,uint8_t *descJson)
     }
 
     cJSON_AddStringToObject(root, "commandCode","3007");
-    cJSON_AddStringToObject(root, "deviceCode", "3E51E8848A4C00863617");
+    cJSON_AddStringToObject(root, "deviceCode", DEVICE_SN);
 
     cJSON_AddItemToObject(root, "data", dataObj);
 

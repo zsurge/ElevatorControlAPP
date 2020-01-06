@@ -32,6 +32,7 @@
 #include "transport.h"
 #include "jsonUtils.h"
 #include "version.h"
+#include "eth_cfg.h"
 
 
 #define LOG_TAG    "comm"
@@ -78,6 +79,7 @@ static SYSERRORCODE_E RemoteOptDev ( uint8_t* msgBuf ); //远程呼梯
 static SYSERRORCODE_E ClearUserInof ( uint8_t* msgBuf ); //删除用户信息
 static SYSERRORCODE_E AddSingleUser( uint8_t* msgBuf ); //添加单个用户
 static SYSERRORCODE_E UnbindDev( uint8_t* msgBuf ); //解除绑定
+static SYSERRORCODE_E SetLocalTime( uint8_t* msgBuf ); //设置本地时间
 
 
 
@@ -110,7 +112,8 @@ CMD_HANDLE_T CmdList[] =
     {"3004", GetUserInfo},   
     {"3005", RemoteOptDev},        
     {"3006", ClearUserInof},   
-    {"3009", UnbindDev},          
+    {"3009", UnbindDev},  
+    {"3013", SetLocalTime}, 
 };
 
 
@@ -333,8 +336,6 @@ SYSERRORCODE_E GetDevInfo ( uint8_t* msgBuf )
 int PublishData(uint8_t *payload_out,uint16_t payload_out_len)
 {
     
-    #define DEVICE_PUBLISH		"/smartCloud/server/msg/device"		
-    
 	MQTTString topicString = MQTTString_initializer;
     
 	uint32_t len = 0;
@@ -464,6 +465,12 @@ static SYSERRORCODE_E GetUserInfo ( uint8_t* msgBuf )
     //2.保存卡号
     memset(value,0x00,sizeof(value));   
     strcpy((char *)cardID,(const char *)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"cardNo",1));
+
+    //服务端下发卡号为空，则补为全0
+    if(strlen((char *)cardID) == 0)
+    {
+        strcpy((char *)value,(const char*)"00000000");
+    }
     strcpy((char *)value,(const char*)cardID);
     log_d("cardNo = %s\r\n",value);
     
@@ -616,72 +623,161 @@ static SYSERRORCODE_E ClearUserInof ( uint8_t* msgBuf )
 //添加单个用户
 static SYSERRORCODE_E AddSingleUser( uint8_t* msgBuf )
 {
-    SYSERRORCODE_E result = NO_ERR;
+    SYSERRORCODE_E result = NO_ERR;    
     uint8_t buf[MQTT_MAX_LEN] = {0};
     uint8_t userID[16] = {0};
     uint8_t cardID[16] = {0};
     uint8_t value[255] = {0};
     uint8_t cardIDvalue[255] = {0};
+    uint8_t tmp[128] = {0};
     uint16_t len = 0;
-    
 
     if(!msgBuf)
     {
         return STR_EMPTY_ERR;
     }
 
+//    //1.保存以userID为key的表
+//    memset(userID,0x00,sizeof(userID));
+//    strcpy((char *)userID,(const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"userId",1));
+//    log_d("userId = %s\r\n",userID);
+
+//    //2.保存卡号
+//    memset(value,0x00,sizeof(value));   
+//    strcpy((char *)cardID,(const char *)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"cardNo",1));
+//    if(strlen((char *)cardID) == 0)
+//    {
+//        strcat((char *)value,"00000000");
+//    }
+//    else
+//    {
+//        strcat((char *)value,(const char*)cardID);
+//    }
+//    log_d("cardNo = %s\r\n",value); 
+//    
+//    //3.保存楼层权限
+//    strcat((char *)value,(const char *)";");
+//    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"accessLayer",1));    
+//    log_d("accessLayer = %s\r\n",value);
+
+//    //4.保存默认楼层
+//    strcat((char *)value,(const char *)";");
+//    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"defaultLayer",1));    
+//    log_d("accessLayer = %s\r\n",value);
+
+//    //5.保存开始时间
+//    strcat((char *)value,(const char *)";");
+//    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"startTime",1));    
+//    log_d("accessLayer = %s\r\n",value);    
+
+//    //6.保存结束时间
+//    strcat((char *)value,(const char *)";");
+//    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"endTime",1));    
+//    log_d("accessLayer = %s\r\n",value);    
+
+//    //写记录
+//    if(ef_set_env((const char*)userID, (const char*)value) == EF_NO_ERR)
+//    {        
+//        //响应服务器
+//        result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status","1",1,buf);
+//        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"commandCode","3004",1,buf);
+//    }
+//    else
+//    {
+//        //响应服务器
+//        result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status","0",1,buf);
+//        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"commandCode","3004",1,buf);        
+//        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"reason","add record error",1,buf);
+//    }    
+
+
     //1.保存以userID为key的表
     memset(userID,0x00,sizeof(userID));
     strcpy((char *)userID,(const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"userId",1));
     log_d("userId = %s\r\n",userID);
+    
+    //1.1 保存以card id 为key的表
+    memset(cardIDvalue,0x00,sizeof(cardIDvalue));    
+    strcpy((char *)cardIDvalue,(const char*)userID);
+    
 
     //2.保存卡号
     memset(value,0x00,sizeof(value));   
     strcpy((char *)cardID,(const char *)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"cardNo",1));
+
+    //服务端下发卡号为空，则补为全0
     if(strlen((char *)cardID) == 0)
     {
-        strcat((char *)value,"00000000");
+        strcpy((char *)value,(const char*)"00000000");
     }
-    else
-    {
-        strcat((char *)value,(const char*)cardID);
-    }
-    log_d("cardNo = %s\r\n",cardID); 
+    strcpy((char *)value,(const char*)cardID);
+    log_d("cardNo = %s\r\n",value);
     
+    
+
     //3.保存楼层权限
+    memset(tmp,0x00,sizeof(tmp));
+    strcpy((char *)tmp,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"accessLayer",1));
+    
     strcat((char *)value,(const char *)";");
-    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"accessLayer",1));    
+    strcat((char *)value,(const char*)tmp);
+
+    strcat((char *)cardIDvalue,(const char*)";");
+    strcat((char *)cardIDvalue,(const char*)tmp);    
     log_d("accessLayer = %s\r\n",value);
 
     //4.保存默认楼层
-    strcat((char *)value,(const char *)";");
-    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"defaultLayer",1));    
-    log_d("accessLayer = %s\r\n",value);
+    memset(tmp,0x00,sizeof(tmp));
+    strcpy((char *)tmp,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"defaultLayer",1));
+    
+    strcat((char *)value,(const char*)";");
+    strcat((char *)value,(const char*)tmp);
+
+    strcat((char *)cardIDvalue,(const char*)";");
+    strcat((char *)cardIDvalue,(const char*)tmp);      
+    log_d("defaultLayer = %s\r\n",value);
 
     //5.保存开始时间
-    strcat((char *)value,(const char *)";");
-    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"startTime",1));    
-    log_d("accessLayer = %s\r\n",value);    
+    memset(tmp,0x00,sizeof(tmp));
+    strcpy((char *)tmp,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"startTime",1));
+    
+    strcat((char *)value,(const char*)";");
+    strcat((char *)value,(const char*)tmp);
+
+    strcat((char *)cardIDvalue,(const char*)";");
+    strcat((char *)cardIDvalue,(const char*)tmp); 
+    log_d("startTime = %s\r\n",value);
 
     //6.保存结束时间
-    strcat((char *)value,(const char *)";");
-    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"endTime",1));    
-    log_d("accessLayer = %s\r\n",value);    
+    memset((char *)tmp,0x00,sizeof(tmp));
+    strcpy((char *)tmp,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"endTime",1));
+    
+    strcat((char *)value,(const char*)";");
+    strcat((char *)value,(const char*)tmp);
+
+    strcat((char *)cardIDvalue,(const char*)";");
+    strcat((char *)cardIDvalue,(const char*)tmp); 
+    log_d("endTime = %s\r\n",value);    
+
 
     //写记录
-    if(ef_set_env((const char*)userID, (const char*)value) == EF_NO_ERR)
+    if((ef_set_env((const char*)userID, (const char*)value) == EF_NO_ERR) && (ef_set_env((const char*)cardID, (const char*)cardIDvalue) == EF_NO_ERR))
     {        
-        //影响服务器
+        //响应服务器
         result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status","1",1,buf);
-        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"commandCode","3004",1,buf);
+        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"commandCode","3004",0,buf);
     }
     else
     {
-        //影响服务器
+        //响应服务器
         result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status","0",1,buf);
-        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"commandCode","3004",1,buf);        
+        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"commandCode","3004",0,buf);        
         result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"reason","add record error",1,buf);
-    }    
+    } 
+
+
+
+
 
     if(result != NO_ERR)
     {
@@ -774,4 +870,13 @@ static SYSERRORCODE_E SendToQueue(uint8_t *buf,int len,uint8_t authMode)
 
     return result;
 }
+
+
+
+//设置本地时间
+static SYSERRORCODE_E SetLocalTime( uint8_t* msgBuf )
+{
+
+}
+
 

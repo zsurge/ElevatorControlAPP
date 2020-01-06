@@ -22,7 +22,7 @@
 #define SECONDS              00          // 0~59
 
 // 日期宏定义
-#define WEEKDAY              5         // 1~7
+#define WEEKDAY              5          // 1~7
 #define DATE                 03         // 1~31
 #define MONTH                01         // 1~12
 #define YEAR                 20         // 0~99
