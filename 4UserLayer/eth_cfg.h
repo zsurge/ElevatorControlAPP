@@ -24,7 +24,8 @@
 /*----------------------------------------------*
  * 包含头文件                                   *
  *----------------------------------------------*/
-#include "stm32f4xx_conf.h"
+#include "tool.h"
+#include "easyflash.h"
 
 
 
@@ -35,17 +36,22 @@
 #define   HOST_PORT     1883    //由于是TCP连接，端口必须是1883
 
 #define DEVICE_PUBLISH		"/smartCloud/server/msg/device"	
-#define DEVICE_SUBSCRIBE	"/smartCloud/terminal/msg/"DEVICE_SN    
-//#define DEVICE_SN           "33F85538F0EB8D1796F6"
+#define DEVICE_SUBSCRIBE	"/smartCloud/terminal/msg/"   
 #define DEVICE_SN           "3E51E8848A4C00863617"
 //#define DEVICE_SN           "0BF49D025715AFB3B0A1"
+//#define DEVICE_SN           "33F85538F0EB8D1796F6"
 
 
-//#define DEV_FACTORY_PUBLISH		"/smartCloud/server/msg/device"	
-//#define DEV_FACTORY_SUBSCRIBE	"/smartCloud/terminal/msg/"DEVICE_SN    
-//#define DEV_FACTORY_SN           "3E51E8848A4C00863617"
+#define DEV_FACTORY_PUBLISH		"/smartCloud/production/msg/device"	
+#define DEV_FACTORY_SUBSCRIBE	"/smartCloud/production/msg/"    
 
 
+typedef struct
+{
+    char sn[32];
+    char publish[128];
+    char subscribe[128];
+}MQTT_DEVICE_SN_T;
 
 
 /*----------------------------------------------*
@@ -55,11 +61,12 @@
 /*----------------------------------------------*
  * 模块级变量                                   *
  *----------------------------------------------*/
-
+extern MQTT_DEVICE_SN_T gMqttDevSn;
 /*----------------------------------------------*
  * 内部函数原型说明                             *
  *----------------------------------------------*/
 
+void ReadLocalDevSn(void);
 
 #endif
 

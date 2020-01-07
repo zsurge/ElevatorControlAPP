@@ -89,4 +89,9 @@ void calcMac(unsigned char *mac);
 
 
 
+void Insertchar(char *src,char*desc,char c);
+
+
+
+
 #endif

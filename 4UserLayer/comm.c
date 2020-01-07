@@ -80,6 +80,8 @@ static SYSERRORCODE_E ClearUserInof ( uint8_t* msgBuf ); //删除用户信息
 static SYSERRORCODE_E AddSingleUser( uint8_t* msgBuf ); //添加单个用户
 static SYSERRORCODE_E UnbindDev( uint8_t* msgBuf ); //解除绑定
 static SYSERRORCODE_E SetLocalTime( uint8_t* msgBuf ); //设置本地时间
+static SYSERRORCODE_E SetLocalSn( uint8_t* msgBuf ); //设置本地SN，MQTT用
+
 
 
 
@@ -106,7 +108,8 @@ CMD_HANDLE_T CmdList[] =
 	{"1021", EnableDev},
 	{"1023", SetDevParam},
 	{"1024", SetJudgeMode},
-	{"1026", GetDevInfo},
+	{"1026", GetDevInfo},        
+	{"3001", SetLocalSn},
     {"3002", GetServerIp},
     {"3003", GetTemplateParam},
     {"3004", GetUserInfo},   
@@ -356,7 +359,8 @@ int PublishData(uint8_t *payload_out,uint16_t payload_out_len)
 
    if(gConnectStatus == 1)
    { 
-       topicString.cstring = DEVICE_PUBLISH;       //属性上报 发布       
+//       topicString.cstring = DEVICE_PUBLISH;       //属性上报 发布       
+       topicString.cstring = gMqttDevSn.publish;       //属性上报 发布    
 
        len = MQTTSerialize_publish((unsigned char*)buf, buflen, 0, req_qos, retained, msgid, topicString, payload_out, payload_out_len);//发布消息
        rc = transport_sendPacketBuffer(gMySock, (unsigned char*)buf, len);
@@ -879,4 +883,52 @@ static SYSERRORCODE_E SetLocalTime( uint8_t* msgBuf )
 
 }
 
+//设置本地SN，MQTT用
+static SYSERRORCODE_E SetLocalSn( uint8_t* msgBuf )
+{
+    SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint8_t deviceCode[32] = {0};
+    uint16_t len = 0;
+//    char *tmpBuf[6] = {0}; //存放分割后的子字符串 
+//    int num = 0;
+    
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+    strcpy((char *)deviceCode,(const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"deviceCode",0));
+
+    result = modifyJsonItem(msgBuf,"status","1",0,buf);
+
+    if(result != NO_ERR)
+    {
+        return result;
+    }
+
+
+//    split(deviceCode,":",tmpBuf,&num); //调用函数进行分割 
+//    log_d("num = %d\r\n",num);
+    
+
+    //记录SN
+    ef_set_env_blob("sn_flag","1111",4);    
+    ef_set_env_blob("remote_sn",deviceCode,strlen(deviceCode));    
+
+    log_d("remote_sn = %s\r\n",deviceCode);
+    
+    len = strlen((const char*)buf);
+
+    log_d("SetLocalSn len = %d,buf = %s\r\n",len,buf);
+
+    PublishData(buf,len);
+
+
+    ReadLocalDevSn();
+
+    return result;
+
+
+}
 

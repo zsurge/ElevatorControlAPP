@@ -21,6 +21,10 @@
  * 包含头文件                                   *
  *----------------------------------------------*/
 #include "eth_cfg.h"
+
+#define LOG_TAG    "ETH_CFG"
+#include "elog.h"
+
 /*----------------------------------------------*
  * 宏定义                                       *
  *----------------------------------------------*/
@@ -32,11 +36,60 @@
 /*----------------------------------------------*
  * 模块级变量                                   *
  *----------------------------------------------*/
+MQTT_DEVICE_SN_T gMqttDevSn;
 
 /*----------------------------------------------*
  * 内部函数原型说明                             *
  *----------------------------------------------*/
+void ReadLocalDevSn(void)
+{
+    char sn_flag[5] = {0};
+    char mac[6+1] = {0};
+    char temp[32] = {0};
+    char asc[12+1] = {0};
+    char remote_sn[20+1] = {0};
+    uint8_t read_len = 0;
 
-#define 
+    memset(&gMqttDevSn,0x00,sizeof(gMqttDevSn));
+    
+    read_len = ef_get_env_blob("sn_flag", sn_flag, sizeof(sn_flag) , NULL);
+    
+    log_d("sn_flag = %s, sn_flag_len = %d\r\n",sn_flag,read_len);
+    
+    if((memcmp(sn_flag,"1111",4) == 0) && (read_len == 4))
+    {
+        read_len = ef_get_env_blob("remote_sn", remote_sn, sizeof(remote_sn) , NULL);
+        if(read_len == 20)
+        {
+            log_d("sn = %s,len = %d\r\n",remote_sn,read_len);
+            strcpy(gMqttDevSn.sn,remote_sn);
+            strcpy(gMqttDevSn.publish,DEVICE_PUBLISH);
+            strcpy(gMqttDevSn.subscribe,DEVICE_SUBSCRIBE);
+            strcat(gMqttDevSn.subscribe,remote_sn); 
+        }
+    }
+    else
+    {
+        //使用MAC做为SN
+        calcMac(mac);
+        bcd2asc(asc, mac, 12, 0); 
+//        sprintf(asc,"%02x:%02x:%02x:%02x:%02x:%02x",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+
+        Insertchar(asc,temp,':');
+
+        memcpy(gMqttDevSn.sn,temp,strlen(temp)-1);
+
+        log_d("strToUpper asc = %s\r\n",gMqttDevSn.sn);
+        ef_set_env_blob("remote_sn",gMqttDevSn.sn,strlen(gMqttDevSn.sn));  
+        
+        strcpy(gMqttDevSn.publish,DEV_FACTORY_PUBLISH);
+        strcpy(gMqttDevSn.subscribe,DEV_FACTORY_SUBSCRIBE);
+        strcat(gMqttDevSn.subscribe,gMqttDevSn.sn);
+    }
+
+    
+    log_d("gMqttDevSn->publish = %s,gMqttDevSn->subscribe = %s\r\n",gMqttDevSn.publish,gMqttDevSn.subscribe);
+}
+
 
 

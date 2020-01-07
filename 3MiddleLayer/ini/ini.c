@@ -25,8 +25,10 @@
 #include "string.h"
 #include "bsp_uart_fifo.h"
 
+
 ICREADER_T   gICReaderParam; 
 QRCODE_T     gQRCodeParam;
+
 
 static SYSERRORCODE_E SaveICParam(void);
 static SYSERRORCODE_E SaveQRParam(void);
@@ -326,6 +328,7 @@ SYSERRORCODE_E ParseDevParam(uint8_t *ParamBuff)
     
     return result;
 }
+
 
 
 

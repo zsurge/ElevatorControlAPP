@@ -46,13 +46,13 @@
 
 
 
-#define LED_STK_SIZE 		(128)
+#define LED_STK_SIZE 		(256)
 #define COMM_STK_SIZE 		(1024*1)
 #define START_STK_SIZE 	    (512)
 #define QR_STK_SIZE 		(512)
 #define READER_STK_SIZE     (512)
 #define HANDSHAKE_STK_SIZE  (256)
-#define KEY_STK_SIZE        (512*1)
+#define KEY_STK_SIZE        (1024*1)
 #define MQTT_STK_SIZE        (1024*2)
 #define DISPLAY_STK_SIZE     (512)
 
@@ -228,12 +228,12 @@ static void AppTaskCreate (void)
                 (TaskHandle_t*  )&xHandleTaskMqtt); 
     
     //Î¤¸ù¶Á¿¨Æ÷
-    xTaskCreate((TaskFunction_t )vTaskReader,     
-                (const char*    )"vReader",   
-                (uint16_t       )READER_STK_SIZE, 
-                (void*          )NULL,
-                (UBaseType_t    )READER_TASK_PRIO,
-                (TaskHandle_t*  )&xHandleTaskReader);    
+//    xTaskCreate((TaskFunction_t )vTaskReader,     
+//                (const char*    )"vReader",   
+//                (uint16_t       )READER_STK_SIZE, 
+//                (void*          )NULL,
+//                (UBaseType_t    )READER_TASK_PRIO,
+//                (TaskHandle_t*  )&xHandleTaskReader);    
 
     //¶þÎ¬ÂëÉ¨ÂëÄ£¿é
     xTaskCreate((TaskFunction_t )vTaskQR,     

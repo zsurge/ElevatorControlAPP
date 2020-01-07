@@ -18,7 +18,7 @@
 #include "ini.h"
 #include "comm.h"
 #include "eth_cfg.h"
-
+#include "ini.h"
 
 #define LOG_TAG    "MQTTAPP"
 #include "elog.h"
@@ -76,6 +76,7 @@ void mqtt_thread(void)
 	data.MQTTVersion = MQTT_VERSION;                //3表示3.1版本，4表示3.11版本
 	data.cleansession = 1;    
 
+    ReadLocalDevSn();
 
     //获取当前滴答，作为心跳包起始时间
 	uint32_t curtick  =	 xTaskGetTickCount();
@@ -148,7 +149,10 @@ void mqtt_thread(void)
 							msgtypes = SUBSCRIBE;													//连接成功 执行 订阅 操作
 							break;
             //订阅主题 客户端订阅请求
-			case SUBSCRIBE: topicString.cstring = DEVICE_SUBSCRIBE;
+			case SUBSCRIBE: 
+//                            topicString.cstring = DEVICE_SUBSCRIBE;
+                            topicString.cstring = gMqttDevSn.subscribe;
+                            
 							len = MQTTSerialize_subscribe((unsigned char*)buf, buflen, 0, msgid, 1, &topicString, &req_qos);
 							rc = transport_sendPacketBuffer(gMySock, (unsigned char*)buf, len);
 							if(rc == len)

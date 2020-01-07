@@ -290,10 +290,10 @@ static SYSERRORCODE_E packetToElevator(LOCAL_USER_T *localUserData,uint8_t *buff
 {
     SYSERRORCODE_E result = NO_ERR;
     uint8_t oneLayer[8] = {0};
-    static uint8_t tmpBuf[MAX_SEND_LEN+1] = {0};
+    uint8_t tmpBuf[MAX_SEND_LEN+1] = {0};
     char *authLayer[64] = {0}; //权限楼层，最多64层
     int num = 0;    
-    static uint8_t sendBuf[MAX_SEND_LEN+1] = {0};
+    uint8_t sendBuf[MAX_SEND_LEN+1] = {0};
 
     uint8_t floor = 0;
 

@@ -503,6 +503,11 @@
               <FileType>1</FileType>
               <FilePath>..\4UserLayer\rs485_process.c</FilePath>
             </File>
+            <File>
+              <FileName>eth_cfg.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\4UserLayer\eth_cfg.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

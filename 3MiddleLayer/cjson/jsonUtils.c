@@ -432,7 +432,8 @@ uint8_t packetPayload(LOCAL_USER_T *localUserData,uint8_t *descJson)
     }
 
     cJSON_AddStringToObject(root, "commandCode","3007");
-    cJSON_AddStringToObject(root, "deviceCode", DEVICE_SN);
+//    cJSON_AddStringToObject(root, "deviceCode", DEVICE_SN);
+    cJSON_AddStringToObject(root, "deviceCode", gMqttDevSn.sn);    
 
     cJSON_AddItemToObject(root, "data", dataObj);
 

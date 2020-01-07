@@ -41,6 +41,7 @@
 #include "cmd_fun.h"
 #include "ini.h"
 #include "malloc.h"
+#include "eth_cfg.h"
 
 
     
