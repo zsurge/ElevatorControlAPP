@@ -18,7 +18,6 @@
 #include "ini.h"
 #include "comm.h"
 #include "eth_cfg.h"
-#include "ini.h"
 
 #define LOG_TAG    "MQTTAPP"
 #include "elog.h"

@@ -605,16 +605,16 @@ static void vTaskDisplay(void *pvParameters)
         vTaskDelay(1000);
         bsp_HC595Show(7,8,9);
         vTaskDelay(1000);
-//        bsp_HC595Show('a','b','c');
-//        vTaskDelay(1000);
-//        bsp_HC595Show('d','e','f');     
-//        vTaskDelay(1000);
-//        bsp_HC595Show('a',0,1);
-//        vTaskDelay(1000);
-//        bsp_HC595Show('d',3,4);   
-//        vTaskDelay(1000);
-//        bsp_HC595Show(1,0,1);  
-//        vTaskDelay(1000);
+        bsp_HC595Show('a','b','c');
+        vTaskDelay(1000);
+        bsp_HC595Show('d','e','f');     
+        vTaskDelay(1000);
+        bsp_HC595Show('a',0,1);
+        vTaskDelay(1000);
+        bsp_HC595Show('d',3,4);   
+        vTaskDelay(1000);
+        bsp_HC595Show(1,0,1);  
+        vTaskDelay(1000);
     }  
 
 }
