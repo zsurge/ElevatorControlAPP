@@ -9,32 +9,55 @@
   */
 #include "stm32f4xx.h"
 #include "bsp_rtc.h"
+#include "stdio.h"
 
 /**
   * @brief  设置时间和日期
   * @param  无
   * @retval 无
   */
-void RTC_TimeAndDate_Set ( void )
+void RTC_TimeAndDate_Set(char *defalutTime)
 {
 	RTC_TimeTypeDef RTC_TimeStructure;
 	RTC_DateTypeDef RTC_DateStructure;
 
+    uint8_t tmp[5] = {0};
+
+
+    //"2020-01-08 08:30:00"
+
+	// 初始化日期
+    memset(tmp,0x00,sizeof(tmp));
+    memcpy(tmp,defalutTime+2,2);	
+	RTC_DateStructure.RTC_Year = atoi(tmp);		
+    
+    memset(tmp,0x00,sizeof(tmp));
+    memcpy(tmp,defalutTime+5,2);  
+	RTC_DateStructure.RTC_Month = atoi(tmp);
+
+    memcpy(tmp,defalutTime+8,2);  
+	RTC_DateStructure.RTC_Date = atoi(tmp);
+
+	RTC_SetDate ( RTC_Format_BINorBCD, &RTC_DateStructure );
+	RTC_WriteBackupRegister ( RTC_BKP_DRX, RTC_BKP_DATA );    
+
 	// 初始化时间
 	RTC_TimeStructure.RTC_H12 = RTC_H12_AMorPM;
-	RTC_TimeStructure.RTC_Hours = HOURS;
-	RTC_TimeStructure.RTC_Minutes = MINUTES;
-	RTC_TimeStructure.RTC_Seconds = SECONDS;
+    
+    memcpy(tmp,defalutTime+11,2);  
+	RTC_TimeStructure.RTC_Hours = atoi(tmp);
+
+    memcpy(tmp,defalutTime+14,2);  
+	RTC_TimeStructure.RTC_Minutes = atoi(tmp);
+
+    memcpy(tmp,defalutTime+17,2);  
+	RTC_TimeStructure.RTC_Seconds = atoi(tmp);
+
+    
 	RTC_SetTime ( RTC_Format_BINorBCD, &RTC_TimeStructure );
 	RTC_WriteBackupRegister ( RTC_BKP_DRX, RTC_BKP_DATA );
 
-	// 初始化日期
-	RTC_DateStructure.RTC_WeekDay = WEEKDAY;
-	RTC_DateStructure.RTC_Date = DATE;
-	RTC_DateStructure.RTC_Month = MONTH;
-	RTC_DateStructure.RTC_Year = YEAR;
-	RTC_SetDate ( RTC_Format_BINorBCD, &RTC_DateStructure );
-	RTC_WriteBackupRegister ( RTC_BKP_DRX, RTC_BKP_DATA );
+
 
     printf("RTC_TimeAndDate_Set\r\n");
 }
@@ -239,7 +262,7 @@ void bsp_rtc_init(void)
     if (RTC_ReadBackupRegister(RTC_BKP_DRX) != RTC_BKP_DATA)
     {
       /* 设置时间和日期 */
-          RTC_TimeAndDate_Set();
+          RTC_TimeAndDate_Set(RTC_DEFAULT_TIEM);
     }
     else
     {

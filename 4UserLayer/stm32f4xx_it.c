@@ -29,6 +29,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_it.h"
+#include "bsp_beep.h"
 
 #define ERR_INFO "\r\nEnter HardFault_Handler, System Halt.\r\n"
 
@@ -65,22 +66,47 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
     
-#if 1
-    const char *pError = ERR_INFO;
-    uint8_t i;
-  
-    for (i = 0; i < sizeof(ERR_INFO); i++)
-    {
-       USART1->DR = pError[i];
-       /* µÈ´ý·¢ËÍ½áÊø */
-       while ((USART1->SR & USART_FLAG_TC) == (uint16_t)RESET);
-    }
-#endif
+//#if 1
+//    const char *pError = ERR_INFO;
+//    uint8_t i;
+//  
+//    for (i = 0; i < sizeof(ERR_INFO); i++)
+//    {
+//       USART1->DR = pError[i];
+//       /* µÈ´ý·¢ËÍ½áÊø */
+//       while ((USART1->SR & USART_FLAG_TC) == (uint16_t)RESET);
+//    }
+//#endif
 
-  /* Go to infinite loop when Hard Fault exception occurs */
-  while (1)
-  {
-  }
+//  /* Go to infinite loop when Hard Fault exception occurs */
+//  while (1)
+//  {
+//  }
+
+	u32 i;
+	u8 t=0;
+
+	static u32 temp=8;
+	
+	temp=SCB->CFSR;					//fault×´Ì¬¼Ä´æÆ÷(@0XE000ED28)°üÀ¨:MMSR,BFSR,UFSR
+ 	printf("CFSR:%8X\r\n",temp);	//ÏÔÊ¾´íÎóÖµ
+	temp=SCB->HFSR;					//Ó²¼þfault×´Ì¬¼Ä´æÆ÷
+ 	printf("HFSR:%8X\r\n",temp);	//ÏÔÊ¾´íÎóÖµ
+ 	temp=SCB->DFSR;					//µ÷ÊÔfault×´Ì¬¼Ä´æÆ÷
+ 	printf("DFSR:%8X\r\n",temp);	//ÏÔÊ¾´íÎóÖµ
+   	temp=SCB->AFSR;					//¸¨Öúfault×´Ì¬¼Ä´æÆ÷
+ 	printf("AFSR:%8X\r\n",temp);	//ÏÔÊ¾´íÎóÖµ
+ 	while(1)
+ 	{
+	 	while(t<6)
+		{
+			t++;
+			BEEP=!BEEP;
+			for(i=0;i<0X1FFFFF;i++);
+	 	}
+ 	
+	  	t = 0;
+	}
 }
 
 /**

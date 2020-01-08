@@ -73,10 +73,7 @@ void ReadLocalDevSn(void)
         //使用MAC做为SN
         calcMac(mac);
         bcd2asc(asc, mac, 12, 0); 
-//        sprintf(asc,"%02x:%02x:%02x:%02x:%02x:%02x",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
-
         Insertchar(asc,temp,':');
-
         memcpy(gMqttDevSn.sn,temp,strlen(temp)-1);
 
         log_d("strToUpper asc = %s\r\n",gMqttDevSn.sn);

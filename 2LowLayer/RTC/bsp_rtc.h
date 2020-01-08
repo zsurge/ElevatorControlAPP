@@ -17,15 +17,18 @@
 
 // 时间宏定义
 #define RTC_H12_AMorPM			 RTC_H12_AM  
-#define HOURS                12          // 0~23
-#define MINUTES              00          // 0~59
-#define SECONDS              00          // 0~59
+//默认时间为 2020年1月8号早上8：30：30
+#define RTC_DEFAULT_TIEM        "2020-01-08 08:30:00"
 
-// 日期宏定义
-#define WEEKDAY              5          // 1~7
-#define DATE                 03         // 1~31
-#define MONTH                01         // 1~12
-#define YEAR                 20         // 0~99
+//#define HOURS                12          // 0~23
+//#define MINUTES              00          // 0~59
+//#define SECONDS              00          // 0~59
+
+//  //日期宏定义
+//#define WEEKDAY              5          // 1~7
+//#define DATE                 03         // 1~31
+//#define MONTH                01         // 1~12
+//#define YEAR                 20         // 0~99
 
 // 时间格式宏定义
 #define RTC_Format_BINorBCD  RTC_Format_BIN
@@ -39,7 +42,7 @@
 void bsp_rtc_init(void);
 
 void RTC_CLK_Config(void);
-void RTC_TimeAndDate_Set(void);
+void RTC_TimeAndDate_Set(char *defalutTime);
 void RTC_TimeAndDate_Show(void);
 
 uint8_t *GetLocalTime(void);

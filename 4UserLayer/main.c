@@ -29,10 +29,7 @@
 /*----------------------------------------------*
  * 宏定义                                       *
  *----------------------------------------------*/
-//任务优先级   
-
-
-
+//任务优先级 
 #define LED_TASK_PRIO	    ( tskIDLE_PRIORITY)
 #define HANDSHAKE_TASK_PRIO	( tskIDLE_PRIORITY)
 #define READER_TASK_PRIO	( tskIDLE_PRIORITY + 1)
@@ -43,9 +40,6 @@
 #define COMM_TASK_PRIO		( tskIDLE_PRIORITY + 4)
 #define START_TASK_PRIO		( tskIDLE_PRIORITY + 5)
 
-
-
-
 #define LED_STK_SIZE 		(256)
 #define COMM_STK_SIZE 		(1024*1)
 #define START_STK_SIZE 	    (512)
@@ -55,28 +49,6 @@
 #define KEY_STK_SIZE        (1024*1)
 #define MQTT_STK_SIZE        (1024*2)
 #define DISPLAY_STK_SIZE     (512)
-
-
-
-
-
-//事件标志
-#define TASK_BIT_0	 (1 << 0)
-#define TASK_BIT_1	 (1 << 1)
-#define TASK_BIT_2	 (1 << 2)
-#define TASK_BIT_3	 (1 << 3)
-#define TASK_BIT_4	 (1 << 4)
-#define TASK_BIT_5	 (1 << 5)
-#define TASK_BIT_6	 (1 << 6)
-#define TASK_BIT_7	 (1 << 7)
-#define TASK_BIT_8	 (1 << 8)
-
-
-
-#define  QUEUE_LEN    20     /* 队列的长度，最大可包含多少个消息 */
-
-
-#define TASK_BIT_ALL ( TASK_BIT_0 | TASK_BIT_1 | TASK_BIT_2 |TASK_BIT_3|TASK_BIT_4|TASK_BIT_5|TASK_BIT_6|TASK_BIT_7|TASK_BIT_8)
 
 /*----------------------------------------------*
  * 模块级变量                                   *
@@ -92,14 +64,9 @@ static TaskHandle_t xHandleTaskKey = NULL;      //按键
 static TaskHandle_t xHandleTaskMqtt = NULL;      //MQTT 测试
 static TaskHandle_t xHandleTaskDisplay = NULL;      //数码管
 
-
-
 //事件句柄
-static EventGroupHandle_t xCreatedEventGroup = NULL;
+EventGroupHandle_t xCreatedEventGroup = NULL;
 SemaphoreHandle_t gxMutex = NULL;
-
-
-
 
 
 /*----------------------------------------------*
@@ -123,6 +90,7 @@ static void vTaskComm(void *pvParameters);
 static void AppTaskCreate(void);
 static void AppObjCreate (void);
 static void App_Printf(char *format, ...);
+
 static void EasyLogInit(void);
 void check_msg_queue(void);
 static void DisplayDevInfo (void);
@@ -228,12 +196,12 @@ static void AppTaskCreate (void)
                 (TaskHandle_t*  )&xHandleTaskMqtt); 
     
     //韦根读卡器
-//    xTaskCreate((TaskFunction_t )vTaskReader,     
-//                (const char*    )"vReader",   
-//                (uint16_t       )READER_STK_SIZE, 
-//                (void*          )NULL,
-//                (UBaseType_t    )READER_TASK_PRIO,
-//                (TaskHandle_t*  )&xHandleTaskReader);    
+    xTaskCreate((TaskFunction_t )vTaskReader,     
+                (const char*    )"vReader",   
+                (uint16_t       )READER_STK_SIZE, 
+                (void*          )NULL,
+                (UBaseType_t    )READER_TASK_PRIO,
+                (TaskHandle_t*  )&xHandleTaskReader);    
 
     //二维码扫码模块
     xTaskCreate((TaskFunction_t )vTaskQR,     
@@ -253,12 +221,12 @@ static void AppTaskCreate (void)
 
 
     //看门狗
-//	xTaskCreate((TaskFunction_t )vTaskStart,     		/* 任务函数  */
-//                (const char*    )"vTaskStart",   		/* 任务名    */
-//                (uint16_t       )START_STK_SIZE,        /* 任务栈大小，单位word，也就是4字节 */
-//                (void*          )NULL,           		/* 任务参数  */
-//                (UBaseType_t    )START_TASK_PRIO,       /* 任务优先级*/
-//                (TaskHandle_t*  )&xHandleTaskStart );   /* 任务句柄  */                
+	xTaskCreate((TaskFunction_t )vTaskStart,     		/* 任务函数  */
+                (const char*    )"vTaskStart",   		/* 任务名    */
+                (uint16_t       )START_STK_SIZE,        /* 任务栈大小，单位word，也就是4字节 */
+                (void*          )NULL,           		/* 任务参数  */
+                (UBaseType_t    )START_TASK_PRIO,       /* 任务优先级*/
+                (TaskHandle_t*  )&xHandleTaskStart );   /* 任务句柄  */                
 
 }
 
@@ -321,14 +289,24 @@ static void AppObjCreate (void)
 static void vTaskStart(void *pvParameters)
 {
 	EventBits_t uxBits;
-	const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS; /* 最大延迟1000ms */   
+	const TickType_t xTicksToWait = 100 / portTICK_PERIOD_MS; /* 最大延迟100ms */   
     
 	/* 
 	  开始执行启动任务主函数前使能独立看门狗。
 	  设置LSI是32分频，下面函数参数范围0-0xFFF，分别代表最小值1ms和最大值4095ms
 	  下面设置的是4s，如果4s内没有喂狗，系统复位。
+
+      LSI分频可以为 [4,8,16,32,64,128,256],
+      对应的最大时间为别为：409.6 819.2 1638.4 3276.8 6553.6 13107.226214.4ms
+
+      计算公式为 Tout=(4 * 2^PR * （RL+1）)/40 ms
+      最小时间单位：1/40 ms
+      考虑分频系数 Prescaler（4-256）：1*Prescaler/40 ms
+      考虑RL值(0-FFF)：1*Prescaler*（RL+1）/40 ms
+
+      目前我们使用的是128分频，最大13.1秒
 	*/
-	bsp_InitIwdg(4000);
+	bsp_InitIwdg(4095);
 	
 	/* 打印系统开机状态，方便查看系统是否复位 */
 	App_Printf("=====================================================\r\n");
@@ -347,59 +325,12 @@ static void vTaskStart(void *pvParameters)
 		
 		if((uxBits & TASK_BIT_ALL) == TASK_BIT_ALL)
 		{  
-		    IWDG_Feed(); //喂狗			
+		    IWDG_Feed(); //喂狗	
 		}
 	    else
 		{
 			/* 基本是每xTicksToWait进来一次 */
 			/* 通过变量uxBits简单的可以在此处检测那个任务长期没有发来运行标志 */
-
-            //时序原因，值不太准确，需要更精准的方法
-
-//            if((uxBits & TASK_BIT_0) != 0x01)
-//            {
-//                DBG("BIT_0 vTaskLed error = %02x,%02x   %02x \r\n",(uxBits & TASK_BIT_0),uxBits,TASK_BIT_0);
-//            }
-
-//            if((uxBits & TASK_BIT_1) != 0x02)
-//            {
-//                DBG("BIT_1 vTaskMotorToHost error = %02x, %02x   %02x \r\n",(uxBits & TASK_BIT_1),uxBits,TASK_BIT_1);
-//            }
-
-//            if((uxBits & TASK_BIT_2) != 0x04)
-//            {
-//                DBG("BIT_2 vTaskMsgPro error = %02x, %02x   %02x \r\n",(uxBits & TASK_BIT_2),uxBits,TASK_BIT_2);
-//            }
-//            
-//            if((uxBits & TASK_BIT_3) != 0x08)
-//            {
-//                DBG("BIT_3 vTaskInfrared error = %02x, %02x   %02x \r\n",(uxBits & TASK_BIT_3),uxBits,TASK_BIT_3);
-//            }
-
-//            if((uxBits & TASK_BIT_4) != 0x10)
-//            {
-//                DBG("BIT_4 vTaskReader error = %02x,%02x   ,%02x \r\n",(uxBits & TASK_BIT_4),uxBits,TASK_BIT_4);
-//            }
-
-//            if((uxBits & TASK_BIT_5) != 0x20)
-//            {
-//                DBG("BIT_5 vTaskQR error = %02x,%02x   ,%02x \r\n",(uxBits & TASK_BIT_5),uxBits,TASK_BIT_5);
-//            }       
-
-//            if((uxBits & TASK_BIT_6) != 0x40)
-//            {
-//                DBG("BIT_6 vTaskRs485 error = %02x,%02x   ,%02x \r\n",(uxBits & TASK_BIT_6),uxBits,TASK_BIT_6);
-//            }  
-
-//            if((uxBits & TASK_BIT_7) != 0x80)
-//            {
-//                DBG("BIT_7 vTaskKey error = %02x,%02x   ,%02x \r\n",(uxBits & TASK_BIT_7),uxBits,TASK_BIT_7);
-//            } 
-
-//            if((uxBits & (TASK_BIT_8>>8)) != 0x01)
-//            {
-//                DBG("BIT_8 vTaskQueryMotor error = %04x,%02x   ,%02x \r\n",(uxBits & (TASK_BIT_8>>8)),uxBits,TASK_BIT_8);
-//            }             
 		}
     }
 }
@@ -454,13 +385,17 @@ static void vTaskComm(void *pvParameters)
             else
             {
                 //发送默认数据包
-//                packetDefaultSendBuf(sendBuf); //打包  
+                packetDefaultSendBuf(sendBuf); //打包  
             }
 
             RS485_SendBuf(COM5,sendBuf,MAX_SEND_LEN);
 
         }
 
+
+
+		/* 发送事件标志，表示任务正常运行 */        
+		xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_1);  
         vTaskDelay(300);
     }
 
@@ -470,15 +405,11 @@ static void vTaskComm(void *pvParameters)
 
 //LED任务函数 
 static void vTaskLed(void *pvParameters)
-{       
+{  
     uint8_t i = 0;
     BEEP = 1;
     vTaskDelay(300);
     BEEP = 0;
-//    vTaskDelay(300);
-//    BEEP = 1;
-//    vTaskDelay(300);
-//    BEEP = 0;    
     
     while(1)
     {  
@@ -498,7 +429,7 @@ static void vTaskLed(void *pvParameters)
         
 		/* 发送事件标志，表示任务正常运行 */        
 		xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_0);  
-        vTaskDelay(100);     
+        vTaskDelay(100); 
     }
 }   
 
@@ -554,7 +485,6 @@ static void vTaskKey(void *pvParameters)
                     log_i("KEY_DOWN_K3\r\n");
 //                    ef_env_set_default();
                     calcRunTime();                  
-                    
 					break;
 				case KEY_OK_PRES:    
 //                    test_env();
@@ -575,7 +505,7 @@ static void vTaskKey(void *pvParameters)
 		}
 
         /* 发送事件标志，表示任务正常运行 */
-//		xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_2);
+		xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_2);
 		
 		vTaskDelay(20);
 	}   
@@ -589,7 +519,7 @@ static void vTaskMqttTest(void *pvParameters)
 
     while(1)
     {
-        vTaskDelay(500);        
+        vTaskDelay(300);        
     }
     
 }
@@ -600,21 +530,25 @@ static void vTaskDisplay(void *pvParameters)
     while(1)
     {
         bsp_HC595Show(1,2,3);
-        vTaskDelay(1000);
+        vTaskDelay(300);
         bsp_HC595Show(4,5,6);
-        vTaskDelay(1000);
+        vTaskDelay(300);
         bsp_HC595Show(7,8,9);
-        vTaskDelay(1000);
+        vTaskDelay(300);
         bsp_HC595Show('a','b','c');
-        vTaskDelay(1000);
+        vTaskDelay(300);
         bsp_HC595Show('d','e','f');     
-        vTaskDelay(1000);
+        vTaskDelay(300);
         bsp_HC595Show('a',0,1);
-        vTaskDelay(1000);
+        vTaskDelay(300);
         bsp_HC595Show('d',3,4);   
-        vTaskDelay(1000);
+        vTaskDelay(300);
         bsp_HC595Show(1,0,1);  
-        vTaskDelay(1000);
+        vTaskDelay(300);
+        
+        /* 发送事件标志，表示任务正常运行 */
+		xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_3);     
+        vTaskDelay(300);
     }  
 
 }
@@ -635,7 +569,7 @@ static void vTaskReader(void *pvParameters)
     ptReader->dataLen = 0;
     ptReader->authMode = AUTH_MODE_CARD;
     memset(ptReader->data,0x00,sizeof(ptReader->data)); 
-    //CARD 230000000089E1E35D
+
     while(1)
     {
         CardID = bsp_WeiGenScanf();
@@ -675,9 +609,9 @@ static void vTaskReader(void *pvParameters)
           
         }
         
-//    	/* 发送事件标志，表示任务正常运行 */        
-//    	//xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_4);       
-//        
+    	/* 发送事件标志，表示任务正常运行 */        
+    	xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_4);       
+        
         vTaskDelay(100);        
     }
 
@@ -769,9 +703,9 @@ static void vTaskHandShake(void *pvParameters)
     asc2bcd(bcdbuf,(uint8_t *)c_new_boot_times , 12, 0);
 
     
-    log_d("local time = %s\r\n",GetLocalTime());
+//    log_d("local time = %s\r\n",GetLocalTime());
 
-     DisplayDevInfo();
+//     DisplayDevInfo();
 
      c_old_boot_times = ef_get_env("boot_times");
      assert_param(c_old_boot_times);

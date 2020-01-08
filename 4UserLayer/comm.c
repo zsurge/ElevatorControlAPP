@@ -33,7 +33,7 @@
 #include "jsonUtils.h"
 #include "version.h"
 #include "eth_cfg.h"
-
+#include "bsp_rtc.h"
 
 #define LOG_TAG    "comm"
 #include "elog.h"						
@@ -69,19 +69,20 @@ static SYSERRORCODE_E UpgradeDev ( uint8_t* msgBuf ); //对设备进行升级
 static SYSERRORCODE_E UpgradeAck ( uint8_t* msgBuf ); //升级应答
 static SYSERRORCODE_E EnableDev ( uint8_t* msgBuf ); //开启设备
 static SYSERRORCODE_E DisableDev ( uint8_t* msgBuf ); //关闭设备
-static SYSERRORCODE_E SetDevParam ( uint8_t* msgBuf ); //设置参数
 static SYSERRORCODE_E SetJudgeMode ( uint8_t* msgBuf ); //设置识别模式
 static SYSERRORCODE_E GetDevInfo ( uint8_t* msgBuf ); //获取设备信息
 static SYSERRORCODE_E GetTemplateParam ( uint8_t* msgBuf ); //获取模板参数
 static SYSERRORCODE_E GetServerIp ( uint8_t* msgBuf ); //获取模板参数
 static SYSERRORCODE_E GetUserInfo ( uint8_t* msgBuf ); //获取用户信息
 static SYSERRORCODE_E RemoteOptDev ( uint8_t* msgBuf ); //远程呼梯
+static SYSERRORCODE_E PCOptDev ( uint8_t* msgBuf ); //PC端呼梯
 static SYSERRORCODE_E ClearUserInof ( uint8_t* msgBuf ); //删除用户信息
 static SYSERRORCODE_E AddSingleUser( uint8_t* msgBuf ); //添加单个用户
 static SYSERRORCODE_E UnbindDev( uint8_t* msgBuf ); //解除绑定
 static SYSERRORCODE_E SetLocalTime( uint8_t* msgBuf ); //设置本地时间
 static SYSERRORCODE_E SetLocalSn( uint8_t* msgBuf ); //设置本地SN，MQTT用
-
+static SYSERRORCODE_E DelCard( uint8_t* msgBuf ); //删除卡号
+static SYSERRORCODE_E DelUserId( uint8_t* msgBuf ); //删除用户
 
 
 
@@ -100,15 +101,15 @@ CMD_HANDLE_T CmdList[] =
 {
 	{"201",  OpenDoor},
 	{"1006", AbnormalAlarm},
+    {"1010", DelUserId},
 	{"1012", AddCardNo},
 	{"1013", DelCardNo},
 	{"1015", AddSingleUser},
 	{"1016", UpgradeDev},
 	{"1017", UpgradeAck},
-	{"1021", EnableDev},
-	{"1023", SetDevParam},
 	{"1024", SetJudgeMode},
-	{"1026", GetDevInfo},        
+	{"1026", GetDevInfo},  
+	{"1027", DelCard},         
 	{"3001", SetLocalSn},
     {"3002", GetServerIp},
     {"3003", GetTemplateParam},
@@ -116,6 +117,9 @@ CMD_HANDLE_T CmdList[] =
     {"3005", RemoteOptDev},        
     {"3006", ClearUserInof},   
     {"3009", UnbindDev},  
+    {"3010", PCOptDev},
+    {"3011", EnableDev}, //同绑定
+    {"3012", DisableDev},//同解绑
     {"3013", SetLocalTime}, 
 };
 
@@ -145,6 +149,85 @@ SYSERRORCODE_E exec_proc ( char* cmd_id, uint8_t *msg_buf )
     ReturnDefault(msg_buf);
 	return result;
 }
+
+
+static SYSERRORCODE_E SendToQueue(uint8_t *buf,int len,uint8_t authMode)
+{
+    SYSERRORCODE_E result = NO_ERR;
+
+    READER_BUFF_T *ptQR; 
+    /* 初始化结构体指针 */
+    ptQR = &gReaderMsg;
+
+	/* 清零 */
+    ptQR->authMode = authMode; 
+    ptQR->dataLen = 0;
+    memset(ptQR->data,0x00,sizeof(ptQR->data)); 
+
+    ptQR->dataLen = len;                
+    memcpy(ptQR->data,buf,len);
+    
+    /* 使用消息队列实现指针变量的传递 */
+    if(xQueueSend(xTransQueue,              /* 消息队列句柄 */
+                 (void *) &ptQR,   /* 发送指针变量recv_buf的地址 */
+                 (TickType_t)50) != pdPASS )
+    {
+        DBG("the queue is full!\r\n");                
+        xQueueReset(xTransQueue);
+    } 
+    else
+    {
+        dbh("QR",(char *)buf,len);
+        log_d("buf = %s,len = %d\r\n",buf,len);
+    } 
+
+
+    return result;
+}
+
+
+int PublishData(uint8_t *payload_out,uint16_t payload_out_len)
+{
+    
+	MQTTString topicString = MQTTString_initializer;
+    
+	uint32_t len = 0;
+	int32_t rc = 0;
+	unsigned char buf[MQTT_MAX_LEN];
+	int buflen = sizeof(buf);
+
+	unsigned short msgid = 1;
+	int req_qos = 0;
+	unsigned char retained = 0;  
+
+    if(!payload_out)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+    log_d("payload_out = %s,payload_out_len = %d\r\n",payload_out,payload_out_len);
+
+   if(gConnectStatus == 1)
+   { 
+//       topicString.cstring = DEVICE_PUBLISH;       //属性上报 发布       
+       topicString.cstring = gMqttDevSn.publish;       //属性上报 发布    
+
+       len = MQTTSerialize_publish((unsigned char*)buf, buflen, 0, req_qos, retained, msgid, topicString, payload_out, payload_out_len);//发布消息
+       rc = transport_sendPacketBuffer(gMySock, (unsigned char*)buf, len);
+       if(rc == len)                                                           //
+           log_d("send PUBLISH Successfully\r\n");
+       else
+           log_d("send PUBLISH failed\r\n");     
+      
+   }
+   else
+   {
+        log_d("MQTT Lost the connect!!!\r\n");
+   }
+
+   return len;
+}
+
 
 
 //这个是为了方便服务端调试，给写的默认返回的函数
@@ -212,10 +295,106 @@ SYSERRORCODE_E AbnormalAlarm ( uint8_t* msgBuf )
 	return result;
 }
 
+//删除用户
+static SYSERRORCODE_E DelUserId( uint8_t* msgBuf )
+{
+	SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint8_t userId[16] = {0};
+    uint16_t len = 0;
+
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+    //1.保存卡号和用户ID
+    strcpy((char *)userId,(const char *)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"userId",1));   
+    log_d("userId = %s\r\n",userId);
+
+    //2.查询以卡号为ID的记录，并删除
+
+    if(ef_del_env(userId) == EF_NO_ERR)
+    {
+        //响应服务器
+        result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status",(const uint8_t *)"1",1,buf);
+    }
+    else
+    {
+        //包括没有该条记录和其它错误
+        result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status",(const uint8_t *)"0",1,buf);
+    }
+    
+    if(result != NO_ERR)
+    {
+        return result;
+    }
+
+    len = strlen((const char*)buf);
+
+    PublishData(buf,len);
+    
+	return result;
+
+}
+
 SYSERRORCODE_E AddCardNo ( uint8_t* msgBuf )
 {
 	SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint8_t tmp[256] = {0};
+    uint8_t cardNo[16] = {0};
+    uint8_t userId[16] = {0};
+    char *p;
+    uint16_t len = 0;
+    uint16_t rcdLen = 0;
+
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+    //1.保存卡号和用户ID
+    strcpy((char *)userId,(const char *)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"userId",1));   
+    strcpy((char *)cardNo,(const char *)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"cardNo",1));
+    log_d("cardNo = %s，userId = %s\r\n",cardNo,userId);
+
+    //2.查询以userId为ID的记录，并追加卡号 
+    rcdLen = ef_get_env_blob(userId, tmp, sizeof(tmp) , NULL);
+
+    if(rcdLen < 20) //每条记录最少30个字节
+    {
+        //失败的，后面再添加处理
+    }
+
+    //3.以userid为索引，追加卡号
+    strcpy(buf,cardNo);
+    strcat(buf,",");
+    strcat(buf,tmp);
+    ef_set_env_blob(userId, buf,strlen(buf));
+
+    //4.追加以卡号为索引的记录
+    //以userID替换掉卡号，用新增卡号做为索引
+    p=strchr(buf,';');
+    
+    log_d("p = %s\r\n",p);
+
+    if(p==NULL)
+    {
+        //失败的，后面再添加处理
+    }
+
+    memset(tmp,0x00,sizeof(tmp));
+    memset(buf,0x00,sizeof(buf));
+    
+    strcpy(tmp,p+1);
+    strcpy(buf,userId);
+    strcat(buf,";");
+    strcat(buf,tmp);      
+    ef_set_env_blob(cardNo, buf,strlen(buf));
+    
 	return result;
+
 }
 
 SYSERRORCODE_E DelCardNo ( uint8_t* msgBuf )
@@ -280,20 +459,69 @@ SYSERRORCODE_E UpgradeAck ( uint8_t* msgBuf )
 
 SYSERRORCODE_E EnableDev ( uint8_t* msgBuf )
 {
-	SYSERRORCODE_E result = NO_ERR;
-	return result;
+    SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint8_t type[4] = {0};
+    uint16_t len = 0;
+
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+    result = modifyJsonItem(msgBuf,"status","1",1,buf);
+
+    if(result != NO_ERR)
+    {
+        return result;
+    }
+
+    //这里需要发消息到消息队列，启用
+    SendToQueue(type,strlen((const char*)type),AUTH_MODE_BIND);
+
+    len = strlen((const char*)buf);
+
+    log_d("EnableDev len = %d,buf = %s\r\n",len,buf);
+
+    PublishData(buf,len);
+
+    return result;
+
+
 }
 
 SYSERRORCODE_E DisableDev ( uint8_t* msgBuf )
 {
-	SYSERRORCODE_E result = NO_ERR;
-	return result;
-}
+    SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint8_t type[4] = {"1"};
+    uint16_t len = 0;
 
-SYSERRORCODE_E SetDevParam ( uint8_t* msgBuf )
-{
-	SYSERRORCODE_E result = NO_ERR;
-	return result;
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+
+    result = modifyJsonItem(msgBuf,"status","1",1,buf);
+
+    if(result != NO_ERR)
+    {
+        return result;
+    }
+
+    //这里需要发消息到消息队列，禁用
+    SendToQueue(type,strlen((const char*)type),AUTH_MODE_UNBIND);
+    
+    len = strlen((const char*)buf);
+
+    log_d("DisableDev len = %d,buf = %s\r\n",len,buf);
+
+    PublishData(buf,len);
+
+    return result;
+
+
 }
 
 SYSERRORCODE_E SetJudgeMode ( uint8_t* msgBuf )
@@ -334,50 +562,50 @@ SYSERRORCODE_E GetDevInfo ( uint8_t* msgBuf )
 
 }
 
-
-
-int PublishData(uint8_t *payload_out,uint16_t payload_out_len)
+//删除卡号
+static SYSERRORCODE_E DelCard( uint8_t* msgBuf )
 {
-    
-	MQTTString topicString = MQTTString_initializer;
-    
-	uint32_t len = 0;
-	int32_t rc = 0;
-	unsigned char buf[MQTT_MAX_LEN];
-	int buflen = sizeof(buf);
+	SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint8_t cardNo[16] = {0};
+    uint8_t userId[16] = {0};
+    uint16_t len = 0;
 
-	unsigned short msgid = 1;
-	int req_qos = 0;
-	unsigned char retained = 0;  
-
-    if(!payload_out)
+    if(!msgBuf)
     {
         return STR_EMPTY_ERR;
     }
 
-    log_d("payload_out = %s,payload_out_len = %d\r\n",payload_out,payload_out_len);
+    //1.保存卡号和用户ID
+    strcpy((char *)userId,(const char *)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"userId",1));   
+    strcpy((char *)cardNo,(const char *)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"cardNo",1));
+    log_d("cardNo = %s，userId = %s\r\n",cardNo,userId);
 
-   if(gConnectStatus == 1)
-   { 
-//       topicString.cstring = DEVICE_PUBLISH;       //属性上报 发布       
-       topicString.cstring = gMqttDevSn.publish;       //属性上报 发布    
+    //2.查询以卡号为ID的记录，并删除
 
-       len = MQTTSerialize_publish((unsigned char*)buf, buflen, 0, req_qos, retained, msgid, topicString, payload_out, payload_out_len);//发布消息
-       rc = transport_sendPacketBuffer(gMySock, (unsigned char*)buf, len);
-       if(rc == len)                                                           //
-           log_d("send PUBLISH Successfully\r\n");
-       else
-           log_d("send PUBLISH failed\r\n");     
-      
-   }
-   else
-   {
-        log_d("MQTT Lost the connect!!!\r\n");
-   }
+    if(ef_del_env(cardNo) == EF_NO_ERR)
+    {
+        //响应服务器
+        result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status",(const uint8_t *)"1",1,buf);
+    }
+    else
+    {
+        //包括没有该条记录和其它错误
+        result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status",(const uint8_t *)"0",1,buf);
+    }
+    
+    if(result != NO_ERR)
+    {
+        return result;
+    }
 
-   return len;
+    len = strlen((const char*)buf);
+
+    PublishData(buf,len);
+    
+	return result;
+
 }
-
 
 SYSERRORCODE_E GetTemplateParam ( uint8_t* msgBuf )
 {
@@ -473,7 +701,7 @@ static SYSERRORCODE_E GetUserInfo ( uint8_t* msgBuf )
     //服务端下发卡号为空，则补为全0
     if(strlen((char *)cardID) == 0)
     {
-        strcpy((char *)value,(const char*)"00000000");
+        strcpy((char *)cardID,(const char*)"00000000");
     }
     strcpy((char *)value,(const char*)cardID);
     log_d("cardNo = %s\r\n",value);
@@ -589,6 +817,44 @@ static SYSERRORCODE_E RemoteOptDev ( uint8_t* msgBuf )
 
 }
 
+//PC端呼梯
+static SYSERRORCODE_E PCOptDev ( uint8_t* msgBuf )
+{
+    SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint8_t purposeLayer[4] = {0};
+    uint16_t len = 0;
+    
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+    
+    strcpy((char *)purposeLayer,(const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"purposeLayer",1));
+
+    result = modifyJsonItem(msgBuf,"status","1",1,buf);
+
+    if(result != NO_ERR)
+    {
+        return result;
+    }
+    
+
+    //这里需要发消息到消息队列，进行呼梯
+    SendToQueue(purposeLayer,strlen((const char*)purposeLayer),AUTH_MODE_REMOTE);
+
+    len = strlen((const char*)buf);
+
+    log_d("RemoteOptDev len = %d,buf = %s\r\n",len,buf);
+
+    PublishData(buf,len); 
+    
+    return result;
+
+}
+
+
 
 //删除用户信息
 static SYSERRORCODE_E ClearUserInof ( uint8_t* msgBuf )
@@ -641,60 +907,6 @@ static SYSERRORCODE_E AddSingleUser( uint8_t* msgBuf )
         return STR_EMPTY_ERR;
     }
 
-//    //1.保存以userID为key的表
-//    memset(userID,0x00,sizeof(userID));
-//    strcpy((char *)userID,(const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"userId",1));
-//    log_d("userId = %s\r\n",userID);
-
-//    //2.保存卡号
-//    memset(value,0x00,sizeof(value));   
-//    strcpy((char *)cardID,(const char *)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"cardNo",1));
-//    if(strlen((char *)cardID) == 0)
-//    {
-//        strcat((char *)value,"00000000");
-//    }
-//    else
-//    {
-//        strcat((char *)value,(const char*)cardID);
-//    }
-//    log_d("cardNo = %s\r\n",value); 
-//    
-//    //3.保存楼层权限
-//    strcat((char *)value,(const char *)";");
-//    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"accessLayer",1));    
-//    log_d("accessLayer = %s\r\n",value);
-
-//    //4.保存默认楼层
-//    strcat((char *)value,(const char *)";");
-//    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"defaultLayer",1));    
-//    log_d("accessLayer = %s\r\n",value);
-
-//    //5.保存开始时间
-//    strcat((char *)value,(const char *)";");
-//    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"startTime",1));    
-//    log_d("accessLayer = %s\r\n",value);    
-
-//    //6.保存结束时间
-//    strcat((char *)value,(const char *)";");
-//    strcat((char *)value,  (const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"endTime",1));    
-//    log_d("accessLayer = %s\r\n",value);    
-
-//    //写记录
-//    if(ef_set_env((const char*)userID, (const char*)value) == EF_NO_ERR)
-//    {        
-//        //响应服务器
-//        result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status","1",1,buf);
-//        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"commandCode","3004",1,buf);
-//    }
-//    else
-//    {
-//        //响应服务器
-//        result = modifyJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"status","0",1,buf);
-//        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"commandCode","3004",1,buf);        
-//        result = modifyJsonItem((const uint8_t *)buf,(const uint8_t *)"reason","add record error",1,buf);
-//    }    
-
-
     //1.保存以userID为key的表
     memset(userID,0x00,sizeof(userID));
     strcpy((char *)userID,(const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"userId",1));
@@ -712,8 +924,9 @@ static SYSERRORCODE_E AddSingleUser( uint8_t* msgBuf )
     //服务端下发卡号为空，则补为全0
     if(strlen((char *)cardID) == 0)
     {
-        strcpy((char *)value,(const char*)"00000000");
+        strcpy((char *)cardID,(const char*)"00000000");
     }
+
     strcpy((char *)value,(const char*)cardID);
     log_d("cardNo = %s\r\n",value);
     
@@ -780,9 +993,6 @@ static SYSERRORCODE_E AddSingleUser( uint8_t* msgBuf )
     } 
 
 
-
-
-
     if(result != NO_ERR)
     {
         return result;
@@ -841,45 +1051,32 @@ static SYSERRORCODE_E UnbindDev( uint8_t* msgBuf )
 
 }
 
-static SYSERRORCODE_E SendToQueue(uint8_t *buf,int len,uint8_t authMode)
-{
-    SYSERRORCODE_E result = NO_ERR;
 
-    READER_BUFF_T *ptQR; 
-    /* 初始化结构体指针 */
-    ptQR = &gReaderMsg;
-
-	/* 清零 */
-    ptQR->authMode = authMode; 
-    ptQR->dataLen = 0;
-    memset(ptQR->data,0x00,sizeof(ptQR->data)); 
-
-    ptQR->dataLen = len;                
-    memcpy(ptQR->data,buf,len);
-    
-    /* 使用消息队列实现指针变量的传递 */
-    if(xQueueSend(xTransQueue,              /* 消息队列句柄 */
-                 (void *) &ptQR,   /* 发送指针变量recv_buf的地址 */
-                 (TickType_t)50) != pdPASS )
-    {
-        DBG("the queue is full!\r\n");                
-        xQueueReset(xTransQueue);
-    } 
-    else
-    {
-        dbh("QR",(char *)buf,len);
-        log_d("buf = %s,len = %d\r\n",buf,len);
-    } 
-
-
-    return result;
-}
 
 
 
 //设置本地时间
 static SYSERRORCODE_E SetLocalTime( uint8_t* msgBuf )
 {
+    SYSERRORCODE_E result = NO_ERR;
+    uint8_t buf[MQTT_MAX_LEN] = {0};
+    uint8_t localTime[32] = {0};
+    uint16_t len = 0;
+    
+    if(!msgBuf)
+    {
+        return STR_EMPTY_ERR;
+    }
+
+    strcpy((char *)localTime,(const char*)GetJsonItem((const uint8_t *)msgBuf,(const uint8_t *)"time",1));
+
+    //保存本地时间
+    log_d("server time is %s\r\n",localTime);
+
+    RTC_TimeAndDate_Set(localTime);
+
+
+    return result;
 
 }
 
@@ -931,4 +1128,6 @@ static SYSERRORCODE_E SetLocalSn( uint8_t* msgBuf )
 
 
 }
+
+
 

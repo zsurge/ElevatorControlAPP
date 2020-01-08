@@ -18,10 +18,28 @@
 #include "ini.h"
 #include "comm.h"
 #include "eth_cfg.h"
+#include "msg.h"
 
 #define LOG_TAG    "MQTTAPP"
 #include "elog.h"
 static void ackUp(void);
+
+static void showTask(void);
+
+static void showTask(void)
+{
+    uint8_t pcWriteBuffer[1024] = {0};
+    
+    printf("=================================================\r\n");
+    printf("任务名      任务状态 优先级   剩余栈 任务序号\r\n");
+    vTaskList((char *)&pcWriteBuffer);
+    printf("%s\r\n", pcWriteBuffer);
+    
+    printf("\r\n任务名       运行计数         使用率\r\n");
+    vTaskGetRunTimeStats((char *)&pcWriteBuffer);
+    printf("%s\r\n", pcWriteBuffer);
+    log_d("当前动态内存剩余大小 = %d字节\r\n", xPortGetFreeHeapSize());  
+}
 
 void mqtt_thread(void)
 {
@@ -90,6 +108,7 @@ void mqtt_thread(void)
 				curtick =  xTaskGetTickCount();
 				msgtypes = PINGREQ;
                 log_d("send heartbeat!!  set msgtypes = %d \r\n",msgtypes);
+                showTask();
 			}
 
 		}
@@ -232,6 +251,10 @@ void mqtt_thread(void)
 			msgtypes = rc;
 			log_d("MQTT is get recv: msgtypes = %d\r\n",msgtypes);
 		}
+
+		/* 发送事件标志，表示任务正常运行 */        
+		xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_6);  
+        
 	}
 	transport_close(gMySock);
     log_d("mqtt thread exit.\r\n");

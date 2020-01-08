@@ -82,7 +82,7 @@ void packetSendBuf(READER_BUFF_T *pQueue,uint8_t *buf)
     localUserData->defaultLayer = 0;
     localUserData->authMode = 0;
     
-    memcpy(buf,sendBuf,MAX_SEND_LEN);
+//    memcpy(buf,sendBuf,MAX_SEND_LEN);
 
 
     switch(pQueue->authMode)
