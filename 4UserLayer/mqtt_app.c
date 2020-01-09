@@ -108,7 +108,7 @@ void mqtt_thread(void)
 				curtick =  xTaskGetTickCount();
 				msgtypes = PINGREQ;
                 log_d("send heartbeat!!  set msgtypes = %d \r\n",msgtypes);
-                showTask();
+                //showTask();
 			}
 
 		}

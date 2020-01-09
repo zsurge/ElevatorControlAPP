@@ -703,14 +703,8 @@ static void vTaskHandShake(void *pvParameters)
     asc2bcd(bcdbuf,(uint8_t *)c_new_boot_times , 12, 0);
 
     
-//    log_d("local time = %s\r\n",GetLocalTime());
-
-//     DisplayDevInfo();
-
-     c_old_boot_times = ef_get_env("boot_times");
-     assert_param(c_old_boot_times);
-     i_boot_times = atol(c_old_boot_times);
-      
+    log_d("local time = %s\r\n",GetLocalTime());
+    
     vTaskDelete( NULL ); //É¾³ý×Ô¼º
 }
 

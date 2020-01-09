@@ -24,7 +24,8 @@
 #include "stdio.h"
 #include "stdlib.h" 
 #include <stdint.h>
-#include "stm32f4xx_conf.h"
+
+
 
 /*----------------------------------------------*
  * ∫Í∂®“Â                                       *

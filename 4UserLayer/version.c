@@ -67,9 +67,9 @@ static uint8_t * GetDevSn(void)
     chipid[1] = *(__I uint32_t *)(0x1FFF7A10 + 0x04);
     chipid[2] = *(__I uint32_t *)(0x1FFF7A10 + 0x08); 
 
-    sprintf(id1,"%d",chipid[0]);
-    sprintf(id2,"%d",chipid[1]);
-    sprintf(id3,"%d",chipid[2]);
+    int2Str(id1, chipid[0]);
+	int2Str(id2, chipid[1]);
+	int2Str(id3, chipid[2]);
 
     strcpy((char *)id,(char *)id1);
     strcat((char *)id,(char *)id2);
