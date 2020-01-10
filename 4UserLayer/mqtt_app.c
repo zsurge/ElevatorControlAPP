@@ -251,6 +251,10 @@ void mqtt_thread(void)
 			msgtypes = rc;
 			log_d("MQTT is get recv: msgtypes = %d\r\n",msgtypes);
 		}
+        else
+        {
+            vTaskDelay(100);
+        }
 
 		/* 发送事件标志，表示任务正常运行 */        
 		xEventGroupSetBits(xCreatedEventGroup, TASK_BIT_6);  

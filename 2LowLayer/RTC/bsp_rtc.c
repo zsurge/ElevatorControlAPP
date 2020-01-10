@@ -56,10 +56,6 @@ void RTC_TimeAndDate_Set(char *defalutTime)
     
 	RTC_SetTime ( RTC_Format_BINorBCD, &RTC_TimeStructure );
 	RTC_WriteBackupRegister ( RTC_BKP_DRX, RTC_BKP_DATA );
-
-
-
-    printf("RTC_TimeAndDate_Set\r\n");
 }
 
 /**
