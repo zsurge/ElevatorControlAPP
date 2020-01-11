@@ -134,8 +134,11 @@ u8 lwip_comm_init ( void )
 	lwip_comm_default_ip_set ( &lwipdev );	//设置默认IP等信息
 	printf ( "lwip_comm_default_ip_set\r\n" );
 
-	while ( LAN8720_Init() )		     //初始化LAN8720,如果失败的话就重试5次
+    EthInitStatus = LAN8720_Init();
+//	while ( LAN8720_Init() )		     //初始化LAN8720,如果失败的话就重试5次
+    while (EthInitStatus )             //初始化LAN8720,如果失败的话就重试5次
 	{
+        EthInitStatus = LAN8720_Init();
 		printf ( "LAN8720_Init\r\n" );
 		retry++;
 		if ( retry>5 )
@@ -145,6 +148,8 @@ u8 lwip_comm_init ( void )
 			return 3;
 		}
 	}
+
+    
 	tcpip_init ( NULL,NULL );				//初始化tcp ip内核,该函数里面会创建tcpip_thread内核任务
 	printf ( "tcpip_init\r\n" );
 

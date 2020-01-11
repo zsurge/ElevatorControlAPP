@@ -137,13 +137,16 @@ SYSERRORCODE_E authReader(READER_BUFF_T *pQueue,LOCAL_USER_T *localUserData)
     char *buf[6] = {0}; //存放分割后的子字符串 
     int num = 0;
     uint8_t key[8+1] = {0};    
+    uint8_t timeStamp[16] = {0};
 
     memset(key,0x00,sizeof(key));
 
     if(pQueue->authMode == AUTH_MODE_QR) 
     {
         //二维码
+        log_d("pQueue->data = %s\r\n",pQueue->data);
         strcpy((char *)key,(const char *)GetJsonItem((const uint8_t *)pQueue->data,(const uint8_t *)"ownerId",0));
+        strcpy((char *)timeStamp,(const char *)GetJsonItem((const uint8_t *)pQueue->data,(const uint8_t *)"datetime",0));
     }
     else
     {
@@ -183,7 +186,8 @@ SYSERRORCODE_E authReader(READER_BUFF_T *pQueue,LOCAL_USER_T *localUserData)
     {
         strcpy(localUserData->userId,key);
         
-        strcpy(localUserData->cardNo,buf[0]);        
+        strcpy(localUserData->cardNo,buf[0]);      
+        strcpy(localUserData->timeStamp,timeStamp);   
     }
     else
     {
@@ -202,6 +206,9 @@ SYSERRORCODE_E authReader(READER_BUFF_T *pQueue,LOCAL_USER_T *localUserData)
     strcpy(localUserData->endTime,buf[4]);    
 
 
+    
+
+
 
     log_d("localUserData->cardNo = %s\r\n",localUserData->cardNo);
     log_d("localUserData->userId = %s\r\n",localUserData->userId);
@@ -210,6 +217,7 @@ SYSERRORCODE_E authReader(READER_BUFF_T *pQueue,LOCAL_USER_T *localUserData)
     log_d("localUserData->startTime = %s\r\n",localUserData->startTime);        
     log_d("localUserData->endTime = %s\r\n",localUserData->endTime);        
     log_d("localUserData->authMode = %d\r\n",localUserData->authMode);
+    log_d("localUserData->timeStamp = %s\r\n",localUserData->timeStamp);
 
     return result;
 }

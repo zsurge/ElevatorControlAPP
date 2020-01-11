@@ -55,6 +55,7 @@ typedef struct
     uint8_t accessLayer[FLOOR_ARRAY_LEN];      //楼层权限
     uint8_t startTime[TIME_LEN];                //开始有效时间
     uint8_t endTime[TIME_LEN];                  //结束时间    
+    uint8_t timeStamp[16];              //二维码时间戳
     uint8_t authMode;                  //鉴权模式,刷卡=2；QR=7
     uint8_t defaultLayer;                       //默认楼层        
     

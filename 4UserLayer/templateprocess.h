@@ -34,21 +34,45 @@
 //创建人信息
 typedef struct
 {
-
+    uint8_t createorID[12];
+    uint8_t createTime[20];
+    uint8_t createCompanyId[12];
+    uint8_t updateUserId[12];
+    uint8_t updateUserName[20];
+    uint8_t createTime[20];
 }CREATOR_INFO_T;
 
 //呼梯方式
-typedef struct
-{
-
-}CALL_MODE_T;
+typedef enum {
+    FACE,
+    QR_CODE,
+    IC_CARD,
+    APPOINTMENT,
+    REMOTE
+} CALL_MODE;
 
 //工作模式 一般/高峰/节假日
+typedef enum {
+    PEAKMODE,
+    HELIDAYMODE    
+} WORK_TYPE;
+
 typedef struct
 {
-
+    WORK_TYPE wMode;
+    uint8_t beginTimep[20];
+    uint8_t endTime[20];
+    uint8_t outsideTime[20];
 }WORK_MODE_T;
 
+
+typedef struct
+{
+    WORK_MODE_T workMode;
+    CREATOR_INFO_T creatorInfo;
+    CALL_MODE callMode;
+}TMEPLATE_T;
+    
 
 //
 

@@ -8,7 +8,7 @@ ETH_DMADESCTypeDef *DMARxDscrTab;	//以太网DMA接收描述符数据结构体指针
 ETH_DMADESCTypeDef *DMATxDscrTab;	//以太网DMA发送描述符数据结构体指针 
 uint8_t *Rx_Buff; 					//以太网底层驱动接收buffers指针 
 uint8_t *Tx_Buff; 					//以太网底层驱动发送buffers指针
-  
+uint8_t EthInitStatus = 0;
 static void ETHERNET_NVICConfiguration(void);
 //LAN8720初始化
 //返回值:0,成功;
@@ -258,6 +258,10 @@ void ETH_Mem_Free(void)
 
 
 
+void LAN8720_DeInit(void)
+{
+     EthInitStatus = LAN8720_Init();
+}
 
 
 

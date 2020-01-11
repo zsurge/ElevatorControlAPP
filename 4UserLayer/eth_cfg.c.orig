@@ -89,7 +89,28 @@ void ReadLocalDevSn ( void )
 }
 
 
+void Eth_Link_ITHandler(struct netif *netif)
+{
+/* Check whether the link interrupt has occurred or not */
+if(((ETH_ReadPHYRegister(DP83848_PHY_ADDRESS, PHY_MISR)) & PHY_LINK_STATUS) != 0){/*检测插拔中断*/
+uint16_t status = ETH_ReadPHYRegister(DP83848_PHY_ADDRESS, PHY_BSR);
+if(status & (PHY_AutoNego_Complete | PHY_Linked_Status)){/*检测到网线连接*/
+if(EthInitStatus == 0){/*之前未成功初始化过*/
+/*Reinit PHY*/
+ETH_Reinit();
+}
+else{/*之前已经成功初始化*/
 
+/*set link up for re link callbalk function*/
+netif_set_link_up(netif);
+}
+}
+else{/*网线断开*/\
+/*set link down for re link callbalk function*/
+netif_set_link_down(netif);
+}
+}
+}
 
 
 

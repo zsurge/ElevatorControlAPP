@@ -19,6 +19,7 @@
 #include "comm.h"
 #include "eth_cfg.h"
 #include "msg.h"
+#include "bsp_beep.h"
 
 #define LOG_TAG    "MQTTAPP"
 #include "elog.h"
@@ -43,7 +44,7 @@ static void showTask ( void )
 
 void mqtt_thread ( void )
 {
-START:
+
 	MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
 	MQTTString receivedTopic;
 	MQTTString topicString = MQTTString_initializer;
@@ -78,11 +79,12 @@ START:
 	rc = transport_sendPacketBuffer ( gMySock, ( uint8_t* ) buf, len );
 	if ( rc == len )															//
 	{
-		log_d ( "send DISCONNECT Successfully\r\n" );
+		log_d ( "send DISCONNECT Successfully,gMySock = %d\r\n", gMySock );
 	}
 	else
 	{
-		log_d ( "send DISCONNECT failed\r\n" );
+        transport_close ( gMySock );
+		log_d ( "send DISCONNECT failed,gMySock = %d\r\n", gMySock);
 	}
 
 	vTaskDelay ( 2500 );
@@ -253,16 +255,18 @@ START:
 				if ( rc == len )
 				{
 					log_d ( "send PINGREQ Successfully\r\n" );
+                    log_d ( "step = %d,time to ping mqtt server to take alive!\r\n",PINGREQ );                    
 				}
 				else
 				{
-					log_d ( "send PINGREQ failed\r\n" );
-					transport_close ( gMySock );
-					goto START;
-				}
+					log_d ( "send PINGREQ failed, gMySock = %d\r\n",gMySock);
 
-					log_d ( "step = %d,time to ping mqtt server to take alive!\r\n",PINGREQ );
-					msgtypes = 0;                
+                    BEEP = 1;
+                    vTaskDelay(1000);
+                    BEEP = 0;
+                    
+				}
+				msgtypes = 0;                
 				break;
 			//ÐÄÌøÏìÓ¦
 			case PINGRESP:

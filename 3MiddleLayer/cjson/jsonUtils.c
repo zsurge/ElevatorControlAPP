@@ -441,6 +441,8 @@ uint8_t packetPayload(LOCAL_USER_T *localUserData,uint8_t *descJson)
     cJSON_AddStringToObject(dataObj, "userId", localUserData->userId);
     cJSON_AddNumberToObject(dataObj, "callType", localUserData->authMode);
     cJSON_AddStringToObject(dataObj, "callElevatorTime",  GetLocalTime());
+    cJSON_AddStringToObject(dataObj, "type","1");
+    cJSON_AddStringToObject(dataObj, "timeStamp",localUserData->timeStamp);
     cJSON_AddStringToObject(dataObj, "status", "1");
             
     tmpBuf = cJSON_PrintUnformatted(root); 

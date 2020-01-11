@@ -33,7 +33,10 @@ typedef struct
 					//0XFF,获取失败.
 }__lwip_dev;
 extern __lwip_dev lwipdev;	//lwip控制结构体
- 
+
+extern struct netif lwip_netif;
+
+
 void lwip_pkt_handle(void);
 void lwip_comm_default_ip_set(__lwip_dev *lwipx);
 u8 lwip_comm_mem_malloc(void);
